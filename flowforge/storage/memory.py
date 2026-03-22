@@ -1,0 +1,120 @@
+import uuid
+from copy import deepcopy
+from datetime import datetime, timezone
+from typing import Any, Dict, Optional
+
+from flowforge.models import FlowRecord, NodeRecord
+from flowforge.storage.base import StorageBackend
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+class InMemoryStorage(StorageBackend):
+    """
+    In-memory storage backend for unit tests.
+
+    Zero infrastructure required. Behaves identically to PostgresStorage
+    from the executor's perspective — same interface, same return types.
+
+    Not thread-safe. Use one instance per test.
+    """
+
+    def __init__(self):
+        self._flows: Dict[str, FlowRecord] = {}   # keyed by tracking_id
+        self._nodes: Dict[str, NodeRecord] = {}   # keyed by "{flow_id}:{step_name}"
+
+    def _node_key(self, flow_id: str, step_name: str) -> str:
+        return f"{flow_id}:{step_name}"
+
+    # -------------------------------------------------------------------------
+    # Flow operations
+    # -------------------------------------------------------------------------
+
+    def get_flow(self, tracking_id: str) -> Optional[FlowRecord]:
+        return deepcopy(self._flows.get(tracking_id))
+
+    def create_flow(
+        self,
+        tracking_id: str,
+        name: str,
+        input_data: Dict[str, Any],
+    ) -> FlowRecord:
+        now = _now()
+        record = FlowRecord(
+            id=tracking_id,
+            name=name,
+            status="RUNNING",
+            input_data=deepcopy(input_data),
+            created_at=now,
+            updated_at=now,
+        )
+        self._flows[tracking_id] = record
+        return deepcopy(record)
+
+    def complete_flow(self, flow_id: str, output_data: Dict[str, Any]) -> None:
+        record = self._flows[flow_id]
+        record.status = "COMPLETED"
+        record.output_data = deepcopy(output_data)
+        record.updated_at = _now()
+
+    def fail_flow(self, flow_id: str, error: str) -> None:
+        record = self._flows[flow_id]
+        record.status = "FAILED"
+        record.error = error
+        record.updated_at = _now()
+
+    # -------------------------------------------------------------------------
+    # Node operations
+    # -------------------------------------------------------------------------
+
+    def get_node(self, flow_id: str, step_name: str) -> Optional[NodeRecord]:
+        return deepcopy(self._nodes.get(self._node_key(flow_id, step_name)))
+
+    def start_node(
+        self,
+        flow_id: str,
+        step_name: str,
+        input_data: Dict[str, Any],
+    ) -> NodeRecord:
+        key = self._node_key(flow_id, step_name)
+        now = _now()
+        existing = self._nodes.get(key)
+        attempt = (existing.attempt_count + 1) if existing else 1
+
+        record = NodeRecord(
+            id=str(uuid.uuid4()),
+            flow_id=flow_id,
+            step_name=step_name,
+            status="RUNNING",
+            input_data=deepcopy(input_data),
+            attempt_count=attempt,
+            started_at=now,
+        )
+        self._nodes[key] = record
+        return deepcopy(record)
+
+    def complete_node(
+        self,
+        flow_id: str,
+        step_name: str,
+        output_data: Dict[str, Any],
+    ) -> None:
+        record = self._nodes[self._node_key(flow_id, step_name)]
+        record.status = "COMPLETED"
+        record.output_data = deepcopy(output_data)
+        record.ended_at = _now()
+
+    def fail_node(
+        self,
+        flow_id: str,
+        step_name: str,
+        error: str,
+        attempt: int,
+    ) -> None:
+        record = self._nodes[self._node_key(flow_id, step_name)]
+        record.status = "FAILED"
+        record.error = error
+        record.attempt_count = attempt
+        record.ended_at = _now()
