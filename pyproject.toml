@@ -26,8 +26,12 @@ dependencies = [
 postgres = [
     "psycopg2-binary>=2.9",
 ]
+mysql = [
+    "mysql-connector-python>=8.0",
+]
 dev = [
     "psycopg2-binary>=2.9",
+    "mysql-connector-python>=8.0",
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "ruff>=0.4",

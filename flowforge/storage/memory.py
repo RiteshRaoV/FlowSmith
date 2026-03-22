@@ -118,3 +118,19 @@ class InMemoryStorage(StorageBackend):
         record.error = error
         record.attempt_count = attempt
         record.ended_at = _now()
+
+    def get_stuck_nodes(self, timeout_seconds: int):
+        from datetime import timezone
+        cutoff = datetime.now(timezone.utc).timestamp() - timeout_seconds
+        stuck = []
+        for node in self._nodes.values():
+            if node.status == "RUNNING" and node.started_at:
+                started = node.started_at
+                # normalise to UTC timestamp whether tz-aware or naive
+                if started.tzinfo is None:
+                    started_ts = started.timestamp()
+                else:
+                    started_ts = started.astimezone(timezone.utc).timestamp()
+                if started_ts < cutoff:
+                    stuck.append(node)
+        return stuck

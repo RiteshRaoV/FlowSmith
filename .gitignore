@@ -1,15 +1,12 @@
 # Python
 __pycache__/
-*.py[cod]
+*.pyc
 *.pyo
 *.pyd
-.Python
-
-# Package / build
 *.egg-info/
 dist/
 build/
-*.egg
+.eggs/
 
 # Virtual environments
 .venv/
@@ -24,6 +21,13 @@ htmlcov/
 # Type checking
 .mypy_cache/
 
+# Linting
+.ruff_cache/
+
+# Environment
+.env
+.env.local
+
 # IDE
 .vscode/
 .idea/
@@ -34,6 +38,5 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# Environment
-.env
-*.env
+# Docker volumes (local Postgres data)
+postgres_data/

@@ -84,3 +84,18 @@ class StorageBackend(ABC):
     ) -> None:
         """Mark a node as FAILED and store the error + attempt count."""
         ...
+
+    # -------------------------------------------------------------------------
+    # Watchdog support
+    # -------------------------------------------------------------------------
+
+    @abstractmethod
+    def get_stuck_nodes(self, timeout_seconds: int):
+        """
+        Return all NodeRecords that are:
+          - status = RUNNING
+          - started_at < now() - timeout_seconds
+
+        Used by the Watchdog to detect crashed processes.
+        """
+        ...

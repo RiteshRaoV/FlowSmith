@@ -6,6 +6,7 @@ Quickstart:
 
     # Once at server startup
     flowforge.configure(database_url=os.environ["DATABASE_URL"])
+    flowforge.start_watchdog(timeout_seconds=300, interval_seconds=60)
 
     # Anywhere in your codebase
     from flowforge import Flow, Context
@@ -16,7 +17,7 @@ Quickstart:
     flow.run(Context({"amount": 100}), tracking_id="order_123")
 """
 
-from flowforge.config import configure, reset
+from flowforge.config import configure, reset, start_watchdog, stop_watchdog
 from flowforge.context import Context
 from flowforge.exceptions import (
     FlowAlreadyCompleted,
@@ -29,6 +30,9 @@ __all__ = [
     # Configuration
     "configure",
     "reset",
+    # Watchdog
+    "start_watchdog",
+    "stop_watchdog",
     # Core API
     "Flow",
     "Context",
@@ -38,4 +42,4 @@ __all__ = [
     "FlowAlreadyCompleted",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

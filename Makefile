@@ -38,22 +38,29 @@ typecheck:
 # Database
 # ---------------------------------------------------------------------------
 
-# Run SQL migrations against DATABASE_URL
+# Run migrations — reads DATABASE_URL from environment
 migrate:
-	@echo "Running FlowForge migrations..."
-	@for f in flowforge/migrations/*.sql; do \
-		echo "  -> $$f"; \
-		psql "$$DATABASE_URL" -f "$$f"; \
-	done
-	@echo "Done."
+	flowforge migrate
+
+migrate-postgres:
+	flowforge migrate --url postgresql://flowforge:flowforge@localhost/flowforge
+
+migrate-mysql:
+	flowforge migrate --url mysql://flowforge:flowforge@localhost/flowforge
 
 # ---------------------------------------------------------------------------
 # Docker (local dev + integration tests)
 # ---------------------------------------------------------------------------
 db-up:
+	docker-compose up -d
+	@echo "Waiting for databases to be ready..."
+	@sleep 4
+
+db-up-postgres:
 	docker-compose up -d postgres
-	@echo "Waiting for Postgres to be ready..."
-	@sleep 2
+
+db-up-mysql:
+	docker-compose up -d mysql
 
 db-down:
 	docker-compose down
