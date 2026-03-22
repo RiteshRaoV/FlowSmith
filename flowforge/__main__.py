@@ -48,6 +48,44 @@ def run_migrations_postgres(url: str) -> None:
     conn.close()
 
 
+def _split_mysql_statements(sql: str) -> list:
+    """
+    Split a MySQL SQL file into individual executable statements.
+
+    Naive semicolon splitting breaks BEGIN...END blocks used in stored
+    procedures — each internal statement ends with a semicolon but must
+    be sent to MySQL as part of the whole CREATE PROCEDURE block.
+
+    This parser tracks BEGIN/END nesting depth and only splits on
+    semicolons that appear outside of a BEGIN...END block.
+    """
+    statements = []
+    current = []
+    depth = 0
+
+    for line in sql.splitlines():
+        stripped = line.strip().upper()
+
+        if stripped in ("BEGIN", "BEGIN;"):
+            depth += 1
+        elif stripped in ("END", "END;", "END;"):
+            depth -= 1
+
+        current.append(line)
+
+        if stripped.endswith(";") and depth == 0:
+            stmt = "\n".join(current).strip().rstrip(";")
+            if stmt:
+                statements.append(stmt)
+            current = []
+
+    remainder = "\n".join(current).strip()
+    if remainder:
+        statements.append(remainder)
+
+    return statements
+
+
 def run_migrations_mysql(url: str) -> None:
     try:
         import mysql.connector
@@ -73,12 +111,10 @@ def run_migrations_mysql(url: str) -> None:
 
     for sql_file in sql_files:
         print(f"  -> {sql_file.name}")
-        statements = [
-            s.strip() for s in sql_file.read_text().split(";")
-            if s.strip()
-        ]
+        statements = _split_mysql_statements(sql_file.read_text())
         for stmt in statements:
-            cur.execute(stmt)
+            if stmt:
+                cur.execute(stmt)
 
     conn.commit()
     cur.close()

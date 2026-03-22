@@ -18,5 +18,29 @@ CREATE TABLE IF NOT EXISTS ff_nodes (
         UNIQUE (flow_id, step_name)
 );
 
-CREATE INDEX IF NOT EXISTS idx_ff_nodes_flow_id ON ff_nodes (flow_id);
-CREATE INDEX IF NOT EXISTS idx_ff_nodes_status  ON ff_nodes (status);
+-- Create indexes only if they don't already exist
+DROP PROCEDURE IF EXISTS ff_create_indexes_nodes;
+
+CREATE PROCEDURE ff_create_indexes_nodes()
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.statistics
+        WHERE table_schema = DATABASE()
+          AND table_name   = 'ff_nodes'
+          AND index_name   = 'idx_ff_nodes_flow_id'
+    ) THEN
+        CREATE INDEX idx_ff_nodes_flow_id ON ff_nodes (flow_id);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.statistics
+        WHERE table_schema = DATABASE()
+          AND table_name   = 'ff_nodes'
+          AND index_name   = 'idx_ff_nodes_status'
+    ) THEN
+        CREATE INDEX idx_ff_nodes_status ON ff_nodes (status);
+    END IF;
+END;
+
+CALL ff_create_indexes_nodes();
+DROP PROCEDURE IF EXISTS ff_create_indexes_nodes;
