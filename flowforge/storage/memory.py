@@ -1,14 +1,14 @@
 import uuid
 from copy import deepcopy
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from flowforge.models import FlowRecord, NodeRecord
 from flowforge.storage.base import StorageBackend
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class InMemoryStorage(StorageBackend):
@@ -22,24 +22,20 @@ class InMemoryStorage(StorageBackend):
     """
 
     def __init__(self):
-        self._flows: Dict[str, FlowRecord] = {}   # keyed by tracking_id
-        self._nodes: Dict[str, NodeRecord] = {}   # keyed by "{flow_id}:{step_name}"
+        self._flows: dict[str, FlowRecord] = {}
+        self._nodes: dict[str, NodeRecord] = {}
 
     def _node_key(self, flow_id: str, step_name: str) -> str:
         return f"{flow_id}:{step_name}"
 
-    # -------------------------------------------------------------------------
-    # Flow operations
-    # -------------------------------------------------------------------------
-
-    def get_flow(self, tracking_id: str) -> Optional[FlowRecord]:
+    def get_flow(self, tracking_id: str) -> FlowRecord | None:
         return deepcopy(self._flows.get(tracking_id))
 
     def create_flow(
         self,
         tracking_id: str,
         name: str,
-        input_data: Dict[str, Any],
+        input_data: dict[str, Any],
     ) -> FlowRecord:
         now = _now()
         record = FlowRecord(
@@ -53,7 +49,7 @@ class InMemoryStorage(StorageBackend):
         self._flows[tracking_id] = record
         return deepcopy(record)
 
-    def complete_flow(self, flow_id: str, output_data: Dict[str, Any]) -> None:
+    def complete_flow(self, flow_id: str, output_data: dict[str, Any]) -> None:
         record = self._flows[flow_id]
         record.status = "COMPLETED"
         record.output_data = deepcopy(output_data)
@@ -65,18 +61,14 @@ class InMemoryStorage(StorageBackend):
         record.error = error
         record.updated_at = _now()
 
-    # -------------------------------------------------------------------------
-    # Node operations
-    # -------------------------------------------------------------------------
-
-    def get_node(self, flow_id: str, step_name: str) -> Optional[NodeRecord]:
+    def get_node(self, flow_id: str, step_name: str) -> NodeRecord | None:
         return deepcopy(self._nodes.get(self._node_key(flow_id, step_name)))
 
     def start_node(
         self,
         flow_id: str,
         step_name: str,
-        input_data: Dict[str, Any],
+        input_data: dict[str, Any],
     ) -> NodeRecord:
         key = self._node_key(flow_id, step_name)
         now = _now()
@@ -99,7 +91,7 @@ class InMemoryStorage(StorageBackend):
         self,
         flow_id: str,
         step_name: str,
-        output_data: Dict[str, Any],
+        output_data: dict[str, Any],
     ) -> None:
         record = self._nodes[self._node_key(flow_id, step_name)]
         record.status = "COMPLETED"
@@ -119,18 +111,17 @@ class InMemoryStorage(StorageBackend):
         record.attempt_count = attempt
         record.ended_at = _now()
 
-    def get_stuck_nodes(self, timeout_seconds: int):
-        from datetime import timezone
-        cutoff = datetime.now(timezone.utc).timestamp() - timeout_seconds
+    def get_stuck_nodes(self, timeout_seconds: int) -> list[NodeRecord]:
+        cutoff = datetime.now(UTC).timestamp() - timeout_seconds
         stuck = []
         for node in self._nodes.values():
             if node.status == "RUNNING" and node.started_at:
                 started = node.started_at
-                # normalise to UTC timestamp whether tz-aware or naive
-                if started.tzinfo is None:
-                    started_ts = started.timestamp()
-                else:
-                    started_ts = started.astimezone(timezone.utc).timestamp()
+                started_ts = (
+                    started.timestamp()
+                    if started.tzinfo is None
+                    else started.astimezone(UTC).timestamp()
+                )
                 if started_ts < cutoff:
                     stuck.append(node)
         return stuck

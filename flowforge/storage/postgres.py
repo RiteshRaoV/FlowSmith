@@ -1,17 +1,17 @@
 import json
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from flowforge.models import FlowRecord, NodeRecord
 from flowforge.storage.base import StorageBackend
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
-def _to_json(data: Any) -> str:
+def _to_json(data: Any) -> str | None:
     return json.dumps(data) if data is not None else None
 
 
@@ -27,11 +27,12 @@ class PostgresStorage(StorageBackend):
     """
     PostgreSQL storage backend.
     Requires: pip install flowforge[postgres]
+    Connection is lazy — happens on first query, not at configure() time.
     """
 
     def __init__(self, url: str):
         self._url = url
-        self._conn = None   # lazy — connect on first use
+        self._conn = None
 
     def _get_conn(self):
         """Return connection, creating it on first call."""
@@ -42,11 +43,11 @@ class PostgresStorage(StorageBackend):
     def _connect(self):
         try:
             import psycopg2
-        except ImportError:
+        except ImportError as err:
             raise ImportError(
                 "psycopg2 is required for PostgresStorage.\n"
                 "Install it with:  pip install flowforge[postgres]"
-            )
+            ) from err
         conn = psycopg2.connect(self._url)
         conn.autocommit = False
         return conn
@@ -55,7 +56,7 @@ class PostgresStorage(StorageBackend):
         import psycopg2.extras
         return self._get_conn().cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-    def get_flow(self, tracking_id: str) -> Optional[FlowRecord]:
+    def get_flow(self, tracking_id: str) -> FlowRecord | None:
         with self._cur() as cur:
             cur.execute("SELECT * FROM ff_flows WHERE id = %s", (tracking_id,))
             row = cur.fetchone()
@@ -63,7 +64,7 @@ class PostgresStorage(StorageBackend):
             return None
         return self._row_to_flow(row)
 
-    def create_flow(self, tracking_id, name, input_data) -> FlowRecord:
+    def create_flow(self, tracking_id: str, name: str, input_data: dict[str, Any]) -> FlowRecord:
         now = _now()
         with self._cur() as cur:
             cur.execute(
@@ -75,7 +76,7 @@ class PostgresStorage(StorageBackend):
         return FlowRecord(id=tracking_id, name=name, status="RUNNING",
                           input_data=input_data, created_at=now, updated_at=now)
 
-    def complete_flow(self, flow_id, output_data) -> None:
+    def complete_flow(self, flow_id: str, output_data: dict[str, Any]) -> None:
         with self._cur() as cur:
             cur.execute(
                 "UPDATE ff_flows SET status='COMPLETED', output_data=%s, updated_at=%s WHERE id=%s",
@@ -83,7 +84,7 @@ class PostgresStorage(StorageBackend):
             )
         self._get_conn().commit()
 
-    def fail_flow(self, flow_id, error) -> None:
+    def fail_flow(self, flow_id: str, error: str) -> None:
         with self._cur() as cur:
             cur.execute(
                 "UPDATE ff_flows SET status='FAILED', error=%s, updated_at=%s WHERE id=%s",
@@ -91,7 +92,7 @@ class PostgresStorage(StorageBackend):
             )
         self._get_conn().commit()
 
-    def get_node(self, flow_id, step_name) -> Optional[NodeRecord]:
+    def get_node(self, flow_id: str, step_name: str) -> NodeRecord | None:
         with self._cur() as cur:
             cur.execute(
                 "SELECT * FROM ff_nodes WHERE flow_id=%s AND step_name=%s",
@@ -102,7 +103,7 @@ class PostgresStorage(StorageBackend):
             return None
         return self._row_to_node(row)
 
-    def start_node(self, flow_id, step_name, input_data) -> NodeRecord:
+    def start_node(self, flow_id: str, step_name: str, input_data: dict[str, Any]) -> NodeRecord:
         now = _now()
         node_id = str(uuid.uuid4())
         with self._cur() as cur:
@@ -123,7 +124,7 @@ class PostgresStorage(StorageBackend):
         self._get_conn().commit()
         return self._row_to_node(row)
 
-    def complete_node(self, flow_id, step_name, output_data) -> None:
+    def complete_node(self, flow_id: str, step_name: str, output_data: dict[str, Any]) -> None:
         with self._cur() as cur:
             cur.execute(
                 "UPDATE ff_nodes SET status='COMPLETED', output_data=%s, ended_at=%s "
@@ -132,7 +133,7 @@ class PostgresStorage(StorageBackend):
             )
         self._get_conn().commit()
 
-    def fail_node(self, flow_id, step_name, error, attempt) -> None:
+    def fail_node(self, flow_id: str, step_name: str, error: str, attempt: int) -> None:
         with self._cur() as cur:
             cur.execute(
                 "UPDATE ff_nodes SET status='FAILED', error=%s, attempt_count=%s, ended_at=%s "
@@ -141,7 +142,7 @@ class PostgresStorage(StorageBackend):
             )
         self._get_conn().commit()
 
-    def get_stuck_nodes(self, timeout_seconds: int):
+    def get_stuck_nodes(self, timeout_seconds: int) -> list[NodeRecord]:
         with self._cur() as cur:
             cur.execute(
                 "SELECT * FROM ff_nodes WHERE status='RUNNING' "
@@ -151,14 +152,14 @@ class PostgresStorage(StorageBackend):
             rows = cur.fetchall()
         return [self._row_to_node(row) for row in rows]
 
-    def _row_to_flow(self, row) -> FlowRecord:
+    def _row_to_flow(self, row: dict) -> FlowRecord:
         return FlowRecord(id=row["id"], name=row["name"], status=row["status"],
                           input_data=_from_json(row["input_data"]),
                           output_data=_from_json(row["output_data"]),
                           error=row["error"], created_at=row["created_at"],
                           updated_at=row["updated_at"])
 
-    def _row_to_node(self, row) -> NodeRecord:
+    def _row_to_node(self, row: dict) -> NodeRecord:
         return NodeRecord(id=row["id"], flow_id=row["flow_id"], step_name=row["step_name"],
                           status=row["status"], input_data=_from_json(row["input_data"]),
                           output_data=_from_json(row["output_data"]), error=row["error"],

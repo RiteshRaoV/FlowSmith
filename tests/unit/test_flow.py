@@ -1,6 +1,6 @@
 import pytest
 
-from flowforge import Flow, Context
+from flowforge import Context, Flow
 from flowforge.exceptions import FlowAlreadyCompleted, FlowForgeNotConfigured
 from flowforge.storage import InMemoryStorage
 
@@ -8,10 +8,6 @@ from flowforge.storage import InMemoryStorage
 def make_flow(name="test_flow"):
     return Flow(name, storage=InMemoryStorage())
 
-
-# ---------------------------------------------------------------------------
-# Configuration guard
-# ---------------------------------------------------------------------------
 
 def test_flow_raises_if_not_configured_and_no_override():
     """
@@ -23,10 +19,6 @@ def test_flow_raises_if_not_configured_and_no_override():
     with pytest.raises(FlowForgeNotConfigured):
         flow.run(Context({}), tracking_id="t1")
 
-
-# ---------------------------------------------------------------------------
-# Happy path
-# ---------------------------------------------------------------------------
 
 def test_run_completes_successfully():
     flow = make_flow()
@@ -41,24 +33,18 @@ def test_flow_stores_final_output():
     storage = InMemoryStorage()
     flow = Flow("my_flow", storage=storage)
     flow.step("produce", lambda ctx: {"answer": 42})
-    ctx = Context({})
-    flow.run(ctx, tracking_id="run-1")
+    flow.run(Context({}), tracking_id="run-1")
 
     record = storage.get_flow("run-1")
     assert record.output_data["produce"]["answer"] == 42
 
 
 def test_step_chaining_returns_self():
-    """flow.step() returns self so steps can be chained."""
     storage = InMemoryStorage()
     flow = Flow("chain", storage=storage)
     result = flow.step("a", lambda ctx: {}).step("b", lambda ctx: {})
     assert result is flow
 
-
-# ---------------------------------------------------------------------------
-# Resume
-# ---------------------------------------------------------------------------
 
 def test_resume_continues_from_failed_flow():
     storage = InMemoryStorage()
@@ -70,7 +56,7 @@ def test_resume_continues_from_failed_flow():
 
     def step_b(ctx):
         call_log.append("b")
-        if len(call_log) < 3:   # fail on first overall attempt of b
+        if call_log.count("b") < 2:
             raise RuntimeError("transient")
         return {"val": 2}
 
@@ -78,19 +64,17 @@ def test_resume_continues_from_failed_flow():
     flow.step("step_a", step_a, retries=1)
     flow.step("step_b", step_b, retries=1)
 
-    # First run — fails on step_b
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         flow.run(Context({}), tracking_id="r1")
 
     assert call_log == ["a", "b"]
 
-    # Second run — step_a skipped, step_b retried successfully
     flow2 = Flow("resume_test", storage=storage)
     flow2.step("step_a", step_a, retries=1)
     flow2.step("step_b", step_b, retries=1)
     flow2.run(Context({}), tracking_id="r1")
 
-    assert call_log == ["a", "b", "b"]   # a not called again
+    assert call_log == ["a", "b", "b"]
     assert storage.get_flow("r1").status == "COMPLETED"
 
 
@@ -104,16 +88,12 @@ def test_run_raises_if_flow_already_completed():
         flow.run(Context({}), tracking_id="done-1")
 
 
-# ---------------------------------------------------------------------------
-# Error handling
-# ---------------------------------------------------------------------------
-
 def test_failed_step_marks_flow_as_failed():
     storage = InMemoryStorage()
     flow = Flow("fail_flow", storage=storage)
     flow.step("bad", lambda ctx: (_ for _ in ()).throw(RuntimeError("boom")), retries=1)
 
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         flow.run(Context({}), tracking_id="f1")
 
     record = storage.get_flow("f1")

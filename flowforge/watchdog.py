@@ -15,8 +15,6 @@ the main process exits. No cleanup required.
 
 import logging
 import threading
-import time
-from typing import Optional
 
 logger = logging.getLogger("flowforge.watchdog")
 
@@ -51,7 +49,7 @@ class Watchdog:
         self._timeout_seconds = timeout_seconds
         self._interval_seconds = interval_seconds
         self._stop_event = threading.Event()
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
 
     def start(self) -> None:
         """Start the watchdog background thread."""
@@ -63,12 +61,13 @@ class Watchdog:
         self._thread = threading.Thread(
             target=self._loop,
             name="flowforge-watchdog",
-            daemon=True,   # dies with the main process, no cleanup needed
+            daemon=True,
         )
         self._thread.start()
         logger.info(
-            f"Watchdog started — timeout={self._timeout_seconds}s, "
-            f"interval={self._interval_seconds}s"
+            "Watchdog started — timeout=%ss, interval=%ss",
+            self._timeout_seconds,
+            self._interval_seconds,
         )
 
     def stop(self) -> None:
@@ -89,35 +88,31 @@ class Watchdog:
                 self._scan()
             except Exception as e:
                 # Never crash the watchdog — log and keep going
-                logger.error(f"Watchdog scan error: {e}", exc_info=True)
+                logger.error("Watchdog scan error: %s", e, exc_info=True)
             # Sleep in small increments so stop() is responsive
             self._stop_event.wait(timeout=self._interval_seconds)
 
     def _scan(self) -> None:
         """Find stuck nodes and mark them failed."""
-        stuck = self._storage.get_stuck_nodes(
-            timeout_seconds=self._timeout_seconds
-        )
+        stuck = self._storage.get_stuck_nodes(timeout_seconds=self._timeout_seconds)
         if not stuck:
             return
 
-        logger.warning(f"Watchdog found {len(stuck)} stuck node(s)")
+        logger.warning("Watchdog found %d stuck node(s)", len(stuck))
 
-        # Track which flows need to be failed
         failed_flows = set()
 
         for node in stuck:
             logger.warning(
-                f"  Stuck node: flow_id={node.flow_id} "
-                f"step={node.step_name} "
-                f"started_at={node.started_at}"
+                "  Stuck node: flow_id=%s step=%s started_at=%s",
+                node.flow_id, node.step_name, node.started_at,
             )
             self._storage.fail_node(
                 flow_id=node.flow_id,
                 step_name=node.step_name,
                 error=(
                     f"Watchdog: node exceeded timeout of {self._timeout_seconds}s. "
-                    f"Process likely crashed. Resume the flow with the same tracking_id."
+                    "Process likely crashed. Resume the flow with the same tracking_id."
                 ),
                 attempt=node.attempt_count,
             )
@@ -130,8 +125,8 @@ class Watchdog:
                 self._storage.fail_flow(
                     flow_id=flow_id,
                     error=(
-                        f"Watchdog: flow failed due to stuck node(s). "
-                        f"Resume with the same tracking_id."
+                        "Watchdog: flow failed due to stuck node(s). "
+                        "Resume with the same tracking_id."
                     ),
                 )
-                logger.warning(f"  Flow {flow_id} marked FAILED by watchdog")
+                logger.warning("  Flow %s marked FAILED by watchdog", flow_id)

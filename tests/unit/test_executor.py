@@ -13,28 +13,18 @@ def make_executor():
 
 
 def make_flow_record(storage, tracking_id="flow-1", name="test_flow"):
-    return storage.create_flow(
-        tracking_id=tracking_id,
-        name=name,
-        input_data={},
-    )
+    return storage.create_flow(tracking_id=tracking_id, name=name, input_data={})
 
-
-# ---------------------------------------------------------------------------
-# Happy path
-# ---------------------------------------------------------------------------
 
 def test_single_step_completes():
     executor, storage = make_executor()
     flow = make_flow_record(storage)
     ctx = Context({})
 
-    step = Step(name="say_hello", fn=lambda ctx: {"msg": "hello"})
-    executor.run(flow, [step], ctx)
+    executor.run(flow, [Step(name="say_hello", fn=lambda ctx: {"msg": "hello"})], ctx)
 
     assert ctx.data["say_hello"]["msg"] == "hello"
-    node = storage.get_node(flow.id, "say_hello")
-    assert node.status == "COMPLETED"
+    assert storage.get_node(flow.id, "say_hello").status == "COMPLETED"
 
 
 def test_output_is_available_to_next_step():
@@ -46,14 +36,9 @@ def test_output_is_available_to_next_step():
         return {"value": 42}
 
     def step_b(ctx):
-        v = ctx.data["step_a"]["value"]
-        return {"doubled": v * 2}
+        return {"doubled": ctx.data["step_a"]["value"] * 2}
 
-    executor.run(flow, [
-        Step("step_a", step_a),
-        Step("step_b", step_b),
-    ], ctx)
-
+    executor.run(flow, [Step("step_a", step_a), Step("step_b", step_b)], ctx)
     assert ctx.data["step_b"]["doubled"] == 84
 
 
@@ -63,9 +48,6 @@ def test_multiple_steps_all_complete():
     ctx = Context({})
     calls = []
 
-    for name in ["a", "b", "c"]:
-        pass  # defined below
-
     steps = [
         Step(name, lambda ctx, n=name: calls.append(n) or {})
         for name in ["a", "b", "c"]
@@ -74,15 +56,10 @@ def test_multiple_steps_all_complete():
     assert calls == ["a", "b", "c"]
 
 
-# ---------------------------------------------------------------------------
-# Resume / replay
-# ---------------------------------------------------------------------------
-
 def test_completed_step_is_skipped_on_resume():
     executor, storage = make_executor()
     flow = make_flow_record(storage)
 
-    # Manually mark step_a as already completed
     storage.start_node(flow.id, "step_a", {})
     storage.complete_node(flow.id, "step_a", {"result": "cached"})
 
@@ -95,8 +72,8 @@ def test_completed_step_is_skipped_on_resume():
     ctx = Context({})
     executor.run(flow, [Step("step_a", step_a)], ctx)
 
-    assert call_count["n"] == 0                          # never called
-    assert ctx.data["step_a"]["result"] == "cached"      # restored from DB
+    assert call_count["n"] == 0
+    assert ctx.data["step_a"]["result"] == "cached"
 
 
 def test_resume_skips_completed_runs_failed():
@@ -124,13 +101,9 @@ def test_resume_skips_completed_runs_failed():
     ctx = Context({})
     executor.run(flow, [Step("step_a", step_a), Step("step_b", step_b)], ctx)
 
-    assert a_calls["n"] == 0   # skipped
-    assert b_calls["n"] == 1   # executed
+    assert a_calls["n"] == 0
+    assert b_calls["n"] == 1
 
-
-# ---------------------------------------------------------------------------
-# Retry logic
-# ---------------------------------------------------------------------------
 
 def test_step_succeeds_on_second_attempt():
     executor, storage = make_executor()

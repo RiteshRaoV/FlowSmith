@@ -12,6 +12,7 @@ Run with:
     pytest tests/integration/ -v -m integration
 """
 import os
+
 import pytest
 
 pytestmark = pytest.mark.integration

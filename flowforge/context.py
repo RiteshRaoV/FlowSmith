@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Any, Dict
+from typing import Any
 
 
 class Context:
@@ -18,14 +18,14 @@ class Context:
             ...
     """
 
-    def __init__(self, data: Dict[str, Any] = None):
-        self.data: Dict[str, Any] = deepcopy(data or {})
+    def __init__(self, data: dict[str, Any] | None = None):
+        self.data: dict[str, Any] = deepcopy(data or {})
 
-    def store(self, step_name: str, output: Dict[str, Any]) -> None:
+    def store(self, step_name: str, output: dict[str, Any]) -> None:
         """Called by the executor to store a step's output under its name."""
         self.data[step_name] = deepcopy(output)
 
-    def snapshot(self) -> Dict[str, Any]:
+    def snapshot(self) -> dict[str, Any]:
         """Return a deep copy of the current data dict for persistence."""
         return deepcopy(self.data)
 

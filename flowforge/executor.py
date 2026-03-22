@@ -1,5 +1,3 @@
-from typing import List
-
 from flowforge.context import Context
 from flowforge.exceptions import StepFailed
 from flowforge.models import FlowRecord
@@ -18,7 +16,7 @@ class Executor:
     def __init__(self, storage: StorageBackend):
         self._storage = storage
 
-    def run(self, flow: FlowRecord, steps: List[Step], ctx: Context) -> None:
+    def run(self, flow: FlowRecord, steps: list[Step], ctx: Context) -> None:
         """
         Execute all steps in order against the given flow record.
         Modifies ctx in-place as steps complete.

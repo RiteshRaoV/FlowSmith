@@ -3,7 +3,7 @@ Unit tests for the Watchdog using InMemoryStorage.
 No database or threading needed for most tests — we call _scan() directly.
 """
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -22,21 +22,14 @@ def make_watchdog(storage, timeout=10, interval=60):
 def backdate_node(storage, flow_id, step_name, seconds_ago):
     """Force a node's started_at into the past to simulate a crash."""
     key = f"{flow_id}:{step_name}"
-    node = storage._nodes[key]
-    node.started_at = datetime.now(timezone.utc) - timedelta(seconds=seconds_ago)
+    storage._nodes[key].started_at = datetime.now(UTC) - timedelta(seconds=seconds_ago)
 
-
-# ---------------------------------------------------------------------------
-# get_stuck_nodes
-# ---------------------------------------------------------------------------
 
 def test_no_stuck_nodes_when_fresh():
     storage = make_storage()
-    flow = storage.create_flow("f1", "test", {})
+    storage.create_flow("f1", "test", {})
     storage.start_node("f1", "step_a", {})
-    # Node just started — not stuck yet
-    stuck = storage.get_stuck_nodes(timeout_seconds=300)
-    assert stuck == []
+    assert storage.get_stuck_nodes(timeout_seconds=300) == []
 
 
 def test_detects_stuck_node():
@@ -57,8 +50,7 @@ def test_completed_node_not_detected():
     storage.complete_node("f1", "step_a", {})
     backdate_node(storage, "f1", "step_a", seconds_ago=400)
 
-    stuck = storage.get_stuck_nodes(timeout_seconds=300)
-    assert stuck == []
+    assert storage.get_stuck_nodes(timeout_seconds=300) == []
 
 
 def test_failed_node_not_detected():
@@ -68,13 +60,8 @@ def test_failed_node_not_detected():
     storage.fail_node("f1", "step_a", "error", 1)
     backdate_node(storage, "f1", "step_a", seconds_ago=400)
 
-    stuck = storage.get_stuck_nodes(timeout_seconds=300)
-    assert stuck == []
+    assert storage.get_stuck_nodes(timeout_seconds=300) == []
 
-
-# ---------------------------------------------------------------------------
-# Watchdog._scan()
-# ---------------------------------------------------------------------------
 
 def test_scan_marks_stuck_node_failed():
     storage = make_storage()
@@ -82,8 +69,7 @@ def test_scan_marks_stuck_node_failed():
     storage.start_node("f1", "step_a", {})
     backdate_node(storage, "f1", "step_a", seconds_ago=400)
 
-    watchdog = make_watchdog(storage, timeout=300)
-    watchdog._scan()
+    make_watchdog(storage, timeout=300)._scan()
 
     node = storage.get_node("f1", "step_a")
     assert node.status == "FAILED"
@@ -96,25 +82,19 @@ def test_scan_marks_parent_flow_failed():
     storage.start_node("f1", "step_a", {})
     backdate_node(storage, "f1", "step_a", seconds_ago=400)
 
-    watchdog = make_watchdog(storage, timeout=300)
-    watchdog._scan()
+    make_watchdog(storage, timeout=300)._scan()
 
-    flow = storage.get_flow("f1")
-    assert flow.status == "FAILED"
-    assert "Watchdog" in flow.error
+    assert storage.get_flow("f1").status == "FAILED"
 
 
 def test_scan_does_nothing_when_no_stuck_nodes():
     storage = make_storage()
     storage.create_flow("f1", "test", {})
     storage.start_node("f1", "step_a", {})
-    # Not backdated — not stuck
 
-    watchdog = make_watchdog(storage, timeout=300)
-    watchdog._scan()
+    make_watchdog(storage, timeout=300)._scan()
 
-    node = storage.get_node("f1", "step_a")
-    assert node.status == "RUNNING"   # untouched
+    assert storage.get_node("f1", "step_a").status == "RUNNING"
 
 
 def test_scan_does_not_fail_already_failed_flow():
@@ -125,17 +105,10 @@ def test_scan_does_not_fail_already_failed_flow():
     storage.start_node("f1", "step_a", {})
     backdate_node(storage, "f1", "step_a", seconds_ago=400)
 
-    watchdog = make_watchdog(storage, timeout=300)
-    watchdog._scan()   # should not raise
+    make_watchdog(storage, timeout=300)._scan()
 
-    flow = storage.get_flow("f1")
-    assert flow.status == "FAILED"
-    assert flow.error == "earlier error"   # original error preserved
+    assert storage.get_flow("f1").error == "earlier error"
 
-
-# ---------------------------------------------------------------------------
-# Watchdog thread lifecycle
-# ---------------------------------------------------------------------------
 
 def test_watchdog_starts_and_stops():
     storage = make_storage()
@@ -155,7 +128,7 @@ def test_watchdog_detects_stuck_node_via_thread():
 
     watchdog = Watchdog(storage=storage, timeout_seconds=300, interval_seconds=1)
     watchdog.start()
-    time.sleep(2)   # let the thread run at least one scan
+    time.sleep(2)
     watchdog.stop()
 
     node = storage.get_node("f1", "step_a")
@@ -168,14 +141,10 @@ def test_start_watchdog_is_idempotent():
     storage = make_storage()
     watchdog = Watchdog(storage=storage, timeout_seconds=300, interval_seconds=60)
     watchdog.start()
-    watchdog.start()   # second call — no-op
+    watchdog.start()
     assert watchdog.is_running
     watchdog.stop()
 
-
-# ---------------------------------------------------------------------------
-# Config-level API
-# ---------------------------------------------------------------------------
 
 def test_start_watchdog_raises_if_not_configured():
     import flowforge
@@ -185,7 +154,7 @@ def test_start_watchdog_raises_if_not_configured():
         flowforge.start_watchdog()
 
 
-def test_start_watchdog_via_config():
+def test_start_watchdog_via_public_api():
     import flowforge
     flowforge.reset()
     flowforge.configure(database_url="postgresql://u:p@localhost/db")

@@ -1,11 +1,10 @@
 import threading
-from typing import Optional
 
 from flowforge.exceptions import FlowForgeNotConfigured
 from flowforge.storage.base import StorageBackend
 
 _lock = threading.Lock()
-_storage: Optional[StorageBackend] = None
+_storage: StorageBackend | None = None
 _watchdog = None   # type: ignore
 
 

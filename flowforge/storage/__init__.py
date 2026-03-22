@@ -1,6 +1,6 @@
 from .base import StorageBackend
 from .memory import InMemoryStorage
-from .postgres import PostgresStorage
 from .mysql import MySQLStorage
+from .postgres import PostgresStorage
 
-__all__ = ["StorageBackend", "InMemoryStorage", "PostgresStorage", "MySQLStorage"]
+__all__ = ["StorageBackend", "InMemoryStorage", "MySQLStorage", "PostgresStorage"]

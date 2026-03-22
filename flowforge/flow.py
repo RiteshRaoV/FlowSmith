@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Optional
+from collections.abc import Callable
 
 from flowforge.context import Context
 from flowforge.exceptions import FlowAlreadyCompleted
@@ -23,7 +23,7 @@ class Flow:
         ...
     """
 
-    def __init__(self, name: str, storage: Optional[StorageBackend] = None):
+    def __init__(self, name: str, storage: StorageBackend | None = None):
         self.name = name
         self._steps: list[Step] = []
         self._storage_override = storage  # None = use global config
@@ -43,11 +43,7 @@ class Flow:
         self._steps.append(Step(name=name, fn=fn, retries=retries))
         return self
 
-    def run(
-        self,
-        ctx: Context,
-        tracking_id: str,
-    ) -> None:
+    def run(self, ctx: Context, tracking_id: str) -> None:
         """
         Execute the flow.
 
@@ -90,7 +86,5 @@ class Flow:
     def _get_storage(self) -> StorageBackend:
         if self._storage_override is not None:
             return self._storage_override
-
-        # Import here to avoid circular imports at module load time
         from flowforge.config import get_storage
         return get_storage()

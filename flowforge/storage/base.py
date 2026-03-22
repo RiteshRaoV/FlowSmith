@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any
 
 from flowforge.models import FlowRecord, NodeRecord
 
@@ -7,17 +7,11 @@ from flowforge.models import FlowRecord, NodeRecord
 class StorageBackend(ABC):
     """
     Abstract interface for all FlowForge storage backends.
-
     Implement this to add a new backend (Redis, MongoDB, SQLite, etc.).
-    All methods must be synchronous for v0.1.
     """
 
-    # -------------------------------------------------------------------------
-    # Flow operations
-    # -------------------------------------------------------------------------
-
     @abstractmethod
-    def get_flow(self, tracking_id: str) -> Optional[FlowRecord]:
+    def get_flow(self, tracking_id: str) -> FlowRecord | None:
         """Return the FlowRecord for the given tracking_id, or None if not found."""
         ...
 
@@ -26,13 +20,13 @@ class StorageBackend(ABC):
         self,
         tracking_id: str,
         name: str,
-        input_data: Dict[str, Any],
+        input_data: dict[str, Any],
     ) -> FlowRecord:
         """Insert a new flow record with status=RUNNING and return it."""
         ...
 
     @abstractmethod
-    def complete_flow(self, flow_id: str, output_data: Dict[str, Any]) -> None:
+    def complete_flow(self, flow_id: str, output_data: dict[str, Any]) -> None:
         """Mark a flow as COMPLETED and store its final output."""
         ...
 
@@ -41,12 +35,8 @@ class StorageBackend(ABC):
         """Mark a flow as FAILED and store the error message."""
         ...
 
-    # -------------------------------------------------------------------------
-    # Node operations
-    # -------------------------------------------------------------------------
-
     @abstractmethod
-    def get_node(self, flow_id: str, step_name: str) -> Optional[NodeRecord]:
+    def get_node(self, flow_id: str, step_name: str) -> NodeRecord | None:
         """Return the NodeRecord for (flow_id, step_name), or None if not found."""
         ...
 
@@ -55,7 +45,7 @@ class StorageBackend(ABC):
         self,
         flow_id: str,
         step_name: str,
-        input_data: Dict[str, Any],
+        input_data: dict[str, Any],
     ) -> NodeRecord:
         """
         Insert a new node record with status=RUNNING.
@@ -69,7 +59,7 @@ class StorageBackend(ABC):
         self,
         flow_id: str,
         step_name: str,
-        output_data: Dict[str, Any],
+        output_data: dict[str, Any],
     ) -> None:
         """Mark a node as COMPLETED and store its output."""
         ...
@@ -85,12 +75,8 @@ class StorageBackend(ABC):
         """Mark a node as FAILED and store the error + attempt count."""
         ...
 
-    # -------------------------------------------------------------------------
-    # Watchdog support
-    # -------------------------------------------------------------------------
-
     @abstractmethod
-    def get_stuck_nodes(self, timeout_seconds: int):
+    def get_stuck_nodes(self, timeout_seconds: int) -> list[NodeRecord]:
         """
         Return all NodeRecords that are:
           - status = RUNNING
