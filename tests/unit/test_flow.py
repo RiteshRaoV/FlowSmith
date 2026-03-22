@@ -1,7 +1,7 @@
 import pytest
 
 from flowforge import Context, Flow
-from flowforge.exceptions import FlowAlreadyCompleted, FlowForgeNotConfigured
+from flowforge.exceptions import FlowAlreadyCompleted, FlowForgeNotConfigured, StepFailed
 from flowforge.storage import InMemoryStorage
 
 
@@ -64,7 +64,7 @@ def test_resume_continues_from_failed_flow():
     flow.step("step_a", step_a, retries=1)
     flow.step("step_b", step_b, retries=1)
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(StepFailed):
         flow.run(Context({}), tracking_id="r1")
 
     assert call_log == ["a", "b"]
@@ -93,7 +93,7 @@ def test_failed_step_marks_flow_as_failed():
     flow = Flow("fail_flow", storage=storage)
     flow.step("bad", lambda ctx: (_ for _ in ()).throw(RuntimeError("boom")), retries=1)
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(StepFailed):
         flow.run(Context({}), tracking_id="f1")
 
     record = storage.get_flow("f1")
