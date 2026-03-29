@@ -120,3 +120,65 @@ jobs:
         env:
           MYSQL_URL: mysql://flowforge:flowforge@localhost/flowforge
         run: pytest tests/integration/test_mysql_storage.py -v --tb=short -m integration
+
+  # ---------------------------------------------------------------------------
+  # Job 4: Smoke tests — full end-to-end scenarios against real databases
+  # ---------------------------------------------------------------------------
+  smoke-test:
+    name: Smoke tests
+    runs-on: ubuntu-latest
+    needs: integration-tests
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER:     flowforge
+          POSTGRES_PASSWORD: flowforge
+          POSTGRES_DB:       flowforge
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U flowforge"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: flowforge
+          MYSQL_DATABASE:      flowforge
+          MYSQL_USER:          flowforge
+          MYSQL_PASSWORD:      flowforge
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost -u flowforge -pflowforge"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run Postgres migrations
+        run: flowforge migrate --url postgresql://flowforge:flowforge@localhost/flowforge
+
+      - name: Run MySQL migrations
+        run: flowforge migrate --url mysql://flowforge:flowforge@localhost/flowforge
+
+      - name: Run smoke tests
+        env:
+          DATABASE_URL: postgresql://flowforge:flowforge@localhost/flowforge
+          MYSQL_URL: mysql://flowforge:flowforge@localhost/flowforge
+        run: python smoke_test.py
