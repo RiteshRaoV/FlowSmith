@@ -168,7 +168,7 @@ class PostgresStorage(StorageBackend):
         with self._conn() as conn:
             rows = conn.execute(text(
                 "SELECT * FROM ff_nodes WHERE status='RUNNING' "
-                "AND started_at < now() - INTERVAL ':timeout seconds'"
+                "AND started_at < now() - INTERVAL '1 second' * :timeout"
             ), {"timeout": timeout_seconds}).mappings().fetchall()
         return [self._row_to_node(row) for row in rows]
 

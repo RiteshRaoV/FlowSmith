@@ -278,7 +278,7 @@ flowforge/
 │   ├── migrations/
 │   │   ├── postgres/      # PostgreSQL migration files
 │   │   └── mysql/         # MySQL migration files
-│   └── contrib/           # Optional integrations — v0.2+ (decorator API, Django hook)
+│   └── contrib/           # Optional integrations — v0.4+ (decorator API, Django hook)
 └── tests/
     ├── unit/              # Fast tests using InMemoryStorage — no infrastructure needed
     └── integration/       # Real database tests — requires docker-compose
@@ -292,8 +292,9 @@ flowforge/
 |---------|-------|
 | **v0.1.0** | Core engine, InMemoryStorage, sequential execution |
 | **v0.2.0** | PostgresStorage, MySQLStorage, migrate CLI, watchdog |
-| **v0.3.0** | Connection pooling, retry backoff strategies, per-step timeout ← current |
-| v0.4.0 | Parallel step execution, conditional branching |
+| **v0.3.0** | Connection pooling, retry backoff strategies, per-step timeout |
+| **v0.3.1** | Bugfixes: stuck-node SQL, cross-platform thread handling, executor logging, CI on PRs, py.typed ← current |
+| v0.4.0 | Decorator API, parallel step execution, conditional branching |
 | v0.5.0 | Async execution, DAG support |
 | v1.0.0 | Stable API, battle tested in production |
 

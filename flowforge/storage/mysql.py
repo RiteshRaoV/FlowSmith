@@ -177,7 +177,7 @@ class MySQLStorage(StorageBackend):
         with self._conn() as conn:
             rows = conn.execute(text(
                 "SELECT * FROM ff_nodes WHERE status='RUNNING' "
-                "AND started_at < NOW() - INTERVAL :timeout SECOND"
+                "AND started_at < DATE_SUB(NOW(), INTERVAL :timeout SECOND)"
             ), {"timeout": timeout_seconds}).mappings().fetchall()
         return [self._row_to_node(row) for row in rows]
 

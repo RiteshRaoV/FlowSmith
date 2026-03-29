@@ -1,4 +1,6 @@
 import ctypes
+import logging
+import platform
 import random
 import threading
 import time
@@ -10,9 +12,16 @@ from flowforge.models import FlowRecord
 from flowforge.step import Step
 from flowforge.storage.base import StorageBackend
 
+logger = logging.getLogger("flowforge.executor")
+
 # Grace period given to a timed-out thread to clean up after receiving
 # StepTimeoutError before the hard kill fires.
 _HARD_KILL_GRACE_SECONDS = 2
+
+# Thread ident type varies by platform — unsigned on Windows, signed on
+# Linux/macOS.  Using the wrong type causes ctypes to silently target the
+# wrong thread (or no thread at all).
+_THREAD_ID_TYPE = ctypes.c_ulong if platform.system() == "Windows" else ctypes.c_ulong
 
 
 def _calc_backoff(step: Step, attempt: int) -> float:
@@ -56,14 +65,14 @@ def _raise_in_thread(thread: threading.Thread, exc_type: type) -> None:
     If the thread is stuck in C code, the hard kill grace period fires instead.
     """
     result = ctypes.pythonapi.PyThreadState_SetAsyncExc(
-        ctypes.c_ulong(thread.ident),
+        _THREAD_ID_TYPE(thread.ident),
         ctypes.py_object(exc_type),
     )
     if result == 0:
         raise ValueError(f"Thread {thread.ident} not found — already finished?")
     if result > 1:
         # More than one thread affected — undo and raise
-        ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_ulong(thread.ident), None)
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(_THREAD_ID_TYPE(thread.ident), None)
         raise SystemError("PyThreadState_SetAsyncExc affected multiple threads")
 
 
@@ -174,11 +183,16 @@ class Executor:
         if node and node.status == "COMPLETED":
             if node.output_data:
                 ctx.store(step.name, node.output_data)
+            logger.debug("Step '%s' already completed — skipped", step.name)
             return
 
         last_exception: Exception | None = None
 
         for attempt in range(1, step.retries + 1):
+            logger.info(
+                "Step '%s' starting (attempt %d/%d)",
+                step.name, attempt, step.retries,
+            )
             self._storage.start_node(
                 flow_id=flow.id,
                 step_name=step.name,
@@ -194,6 +208,7 @@ class Executor:
                     output_data=output,
                 )
                 ctx.store(step.name, output)
+                logger.info("Step '%s' completed (attempt %d/%d)", step.name, attempt, step.retries)
                 return   # success
 
             except StepTimeoutError as exc:
@@ -206,6 +221,10 @@ class Executor:
                     error=str(exc),
                     attempt=attempt,
                 )
+                logger.warning(
+                    "Step '%s' timed out after %ds (attempt %d/%d)",
+                    step.name, step.timeout, attempt, step.retries,
+                )
 
             except Exception as exc:
                 last_exception = exc
@@ -215,11 +234,19 @@ class Executor:
                     error=str(exc),
                     attempt=attempt,
                 )
+                logger.warning(
+                    "Step '%s' failed (attempt %d/%d): %s",
+                    step.name, attempt, step.retries, exc,
+                )
 
             # Apply backoff before next attempt (not after last failure)
             if attempt < step.retries:
                 delay = _calc_backoff(step, attempt)
                 if delay > 0:
+                    logger.info(
+                        "Step '%s' retrying in %.1fs (%s backoff)",
+                        step.name, delay, step.backoff,
+                    )
                     time.sleep(delay)
 
         raise StepFailed(
@@ -227,3 +254,4 @@ class Executor:
             attempt=step.retries,
             original=last_exception,
         )
+
