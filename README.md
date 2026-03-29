@@ -48,7 +48,12 @@ pip install flowforge[postgres,mysql]
 ```python
 import flowforge
 
-flowforge.configure(database_url=os.environ["DATABASE_URL"])
+flowforge.configure(
+    database_url=os.environ["DATABASE_URL"],
+    pool_min=2,      # always 2 connections alive
+    pool_max=10,     # scales to 10 under load
+    pool_timeout=30, # wait 30s for a free connection before erroring
+)
 
 # Optional but recommended — detects crashed nodes automatically
 flowforge.start_watchdog(timeout_seconds=300, interval_seconds=60)
