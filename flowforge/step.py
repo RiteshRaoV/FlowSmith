@@ -49,3 +49,17 @@ class Step:
                 f"Step '{self.name}': timeout must be >= 1 second (got {self.timeout})"
             )
 
+
+@dataclass
+class ParallelGroup:
+    """
+    Represents a bundle of steps that should be executed concurrently.
+    """
+    steps: list[Step]
+
+    @property
+    def name(self) -> str:
+        # Generate a distinct name based on the bundled steps
+        names = ",".join(s.name for s in self.steps)
+        return f"ParallelGroup({names})"
+

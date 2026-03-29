@@ -46,7 +46,7 @@ Quickstart:
 
 from flowforge.config import configure, reset, start_watchdog, stop_watchdog
 from flowforge.context import Context
-from flowforge.decorators import step, workflow
+from flowforge.decorators import parallel, step, subflow, workflow
 from flowforge.exceptions import (
     FlowAlreadyCompleted,
     FlowForgeNotConfigured,
@@ -67,6 +67,8 @@ __all__ = [
     "Context",
     # Decorators
     "workflow",
+    "subflow",
+    "parallel",
     "step",
     # Exceptions
     "FlowForgeNotConfigured",
@@ -75,4 +77,4 @@ __all__ = [
     "FlowAlreadyCompleted",
 ]
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"

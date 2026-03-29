@@ -163,6 +163,46 @@ The decorator natively handles retries, pausing on crashes, and skipped steps, e
 
 ---
 
+## Parallel Execution & Subflows (v0.5+)
+
+FlowForge supports executing multiple independent steps concurrently utilizing a `ThreadPoolExecutor`, and formally supports isolated sub-workflows.
+
+```python
+from flowforge.decorators import workflow, step, parallel, subflow
+
+@workflow("analytics_pipeline")
+def process_data():
+    
+    # 1. Parallel execution block
+    # Everything inside this block runs concurrently!
+    @parallel
+    def fetch_phase():
+        @step
+        def get_users(ctx): ...
+        
+        @step
+        def get_products(ctx): ...
+
+    # 2. Sequential step
+    # Naturally waits for the entire fetch_phase to complete.
+    @step
+    def generate_report(ctx): ...
+
+    # 3. Trigger a formal sub-workflow
+    # Safely embeds a child flow process. Blocks parent until child is thoroughly DONE.
+    @subflow
+    def alert_email(ctx):
+        return {
+            "flow": send_email_flow, 
+            "tracking_id": f"mail_{ctx.data['user_id']}"
+        }
+
+```
+
+> For power users: `flow.parallel()` and `flow.subflow()` are fully available on the native builder API as well!
+
+---
+
 ## Core guarantees
 
 | Guarantee | What it means |
@@ -327,8 +367,9 @@ flowforge/
 | **v0.2.0** | PostgresStorage, MySQLStorage, migrate CLI, watchdog |
 | **v0.3.0** | Connection pooling, retry backoff strategies, per-step timeout |
 | **v0.3.1** | Bugfixes: stuck-node SQL, cross-platform thread handling, CI on PRs, py.typed |
-| **v0.4.0** | Decorator API builder pattern, conditional branching ← current |
-| v0.5.0 | Async execution, DAG support, parallel step execution |
+| **v0.4.0** | Decorator API builder pattern, conditional branching |
+| **v0.5.0** | Parallel step execution, First-class blocking sub-flows ← current |
+| v0.6.0 | Fire-and-forget daemon background workers, dashboard GUI |
 | v1.0.0 | Stable API, battle tested in production |
 
 ---

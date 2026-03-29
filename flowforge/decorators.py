@@ -83,3 +83,64 @@ def workflow(name: str | Callable | None = None):
         return decorator(name)
 
     return decorator
+
+
+def parallel(fn: Callable) -> Callable:
+    """
+    Decorator to mark a block of steps to be executed concurrently.
+    All @step definitions inside this function will be bundled into a ParallelGroup.
+    """
+    flow = _current_flow.get()
+    if flow is not None:
+        with flow.parallel():
+            fn()
+    return fn
+
+
+def subflow(
+    name: str | Callable | None = None,
+    *,
+    retries: int = 1,
+    backoff: str = "fixed",
+    backoff_base: float = 0.0,
+    timeout: int | None = None,
+    condition: Callable | None = None,
+):
+    """
+    Decorator to formally register a subflow execution.
+    The decorated function must return a dict containing {"flow": Flow, "tracking_id": str}.
+    """
+    def decorator(fn: Callable) -> Callable:
+        step_name = name if isinstance(name, str) else fn.__name__
+        flow_builder = _current_flow.get()
+        
+        if flow_builder is not None:
+            def _subflow_wrapper(ctx):
+                result = fn(ctx)
+                child_runner = result["flow"]
+                tid = result["tracking_id"]
+                
+                from flowforge.flow import Flow
+                if isinstance(child_runner, Flow):
+                    child_runner.run(ctx, tracking_id=tid)
+                else:
+                    # Assumes it's a @workflow decorated function
+                    child_runner(ctx, tracking_id=tid)
+                    
+                return {"tracking_id": tid, "status": "COMPLETED"}
+
+            flow_builder.step(
+                name=step_name,
+                fn=_subflow_wrapper,
+                retries=retries,
+                backoff=backoff,
+                backoff_base=backoff_base,
+                timeout=timeout,
+                condition=condition,
+            )
+        return fn
+
+    if callable(name):
+        return decorator(name)
+
+    return decorator

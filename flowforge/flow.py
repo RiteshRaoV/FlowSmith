@@ -1,9 +1,10 @@
+import contextlib
 from collections.abc import Callable
 
 from flowforge.context import Context
 from flowforge.exceptions import FlowAlreadyCompleted
 from flowforge.executor import Executor
-from flowforge.step import Step
+from flowforge.step import ParallelGroup, Step
 from flowforge.storage.base import StorageBackend
 
 
@@ -25,8 +26,24 @@ class Flow:
 
     def __init__(self, name: str, storage: StorageBackend | None = None):
         self.name = name
-        self._steps: list[Step] = []
+        self._steps: list[Step | ParallelGroup] = []
         self._storage_override = storage
+        self._active_parallel_group: ParallelGroup | None = None
+
+    @contextlib.contextmanager
+    def parallel(self):
+        """
+        Context manager to bundle subsequent step() calls into a ParallelGroup.
+        When executed, all steps in this group run concurrently.
+        """
+        group = ParallelGroup(steps=[])
+        self._active_parallel_group = group
+        try:
+            yield
+        finally:
+            self._active_parallel_group = None
+            if group.steps:
+                self._steps.append(group)
 
     def step(
         self,
@@ -59,7 +76,7 @@ class Flow:
 
         Returns self for optional chaining.
         """
-        self._steps.append(Step(
+        step_obj = Step(
             name=name,
             fn=fn,
             retries=retries,
@@ -67,8 +84,45 @@ class Flow:
             backoff_base=backoff_base,
             timeout=timeout,
             condition=condition,
-        ))
+        )
+        if self._active_parallel_group is not None:
+            self._active_parallel_group.steps.append(step_obj)
+        else:
+            self._steps.append(step_obj)
         return self
+
+    def subflow(
+        self,
+        name: str,
+        flow: "Flow",
+        get_tracking_id: Callable[[Context], str],
+        retries: int = 1,
+        backoff: str = "fixed",
+        backoff_base: float = 0.0,
+        timeout: int | None = None,
+        condition: Callable | None = None,
+    ) -> "Flow":
+        """
+        Formally register an embedded sub-flow as a step execution.
+
+        Args:
+            flow:             The Flow instance to trigger.
+            get_tracking_id:  Lambda mapping current Context to the child flow's tracking_id.
+        """
+        def _subflow_runner(ctx: Context) -> dict:
+            tid = get_tracking_id(ctx)
+            flow.run(ctx, tracking_id=tid)
+            return {"tracking_id": tid, "status": "COMPLETED"}
+
+        return self.step(
+            name=name,
+            fn=_subflow_runner,
+            retries=retries,
+            backoff=backoff,
+            backoff_base=backoff_base,
+            timeout=timeout,
+            condition=condition,
+        )
 
     def run(self, ctx: Context, tracking_id: str) -> None:
         """

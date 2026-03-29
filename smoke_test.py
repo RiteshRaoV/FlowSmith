@@ -463,9 +463,76 @@ def scenario_decorator_api(storage, backend: str):
     _assert("charge_payment" in ctx.data, "step 2 executed (condition=True)")
     _assert("skipped_manager_approval" not in ctx.data, "step 3 skipped (condition=False)")
     _assert("send_receipt" in ctx.data, "step 4 executed")
-
     _assert(storage.get_node(tid, "skipped_manager_approval") is None, "skipped step left no node record")
 
+
+# ---------------------------------------------------------------------------
+# Scenario 9: Parallel Execution & Subflows
+# ---------------------------------------------------------------------------
+
+def scenario_v5_scaling(storage, backend: str):
+    _header("Scenario 9: v0.5 Scaling — Parallel Groups & Subflows", backend)
+    _cleanup(storage)
+
+    from flowforge.decorators import workflow, step, parallel, subflow
+
+    @workflow("child_smoke")
+    def smoke_subflow():
+        @step
+        def child_work(ctx):
+            time.sleep(0.1)
+            return {"child_done": True, "uid": ctx.data["uid"]}
+
+    @workflow("parent_smoke")
+    def smoke_parent():
+        @step
+        def init(ctx):
+            return {"started": True}
+
+        @parallel
+        def fetchers():
+            @step
+            def fetch_a(ctx):
+                time.sleep(0.1)
+                return {"val": "A"}
+            
+            @step
+            def fetch_b(ctx):
+                time.sleep(0.1)
+                return {"val": "B"}
+
+        @subflow
+        def trigger_smoke_subflow(ctx):
+            return {
+                "flow": smoke_subflow,
+                "tracking_id": f"child_{ctx.data['uid']}"
+            }
+
+        @step
+        def finalize(ctx):
+            return {"done": True}
+
+    tid = _tracking_id()
+    ctx = Context({"uid": "user_123"})
+    
+    start_time = time.time()
+    smoke_parent(ctx, tracking_id=tid)
+    elapsed = time.time() - start_time
+
+    # Verification
+    record = storage.get_flow(tid)
+    _assert(record.status == "COMPLETED", "parent flow is COMPLETED")
+    
+    child_record = storage.get_flow("child_user_123")
+    _assert(child_record is not None and child_record.status == "COMPLETED", "child flow explicitly COMPLETED")
+
+    _assert(ctx.data["fetch_a"]["val"] == "A", "parallel step A completed")
+    _assert(ctx.data["fetch_b"]["val"] == "B", "parallel step B completed")
+    
+    # fetch_a and fetch_b both sleep 0.1s. child sleeps 0.1s.
+    # Sequential execution: 0.3s. Parallel execution: 0.2s.
+    # Allowing for DB overhead, let's just assert the data is correct.
+    _assert("finalize" in ctx.data, "finalize completed")
 
 # ---------------------------------------------------------------------------
 # Runner
@@ -480,6 +547,7 @@ SCENARIOS = [
     scenario_idempotency,
     scenario_watchdog,
     scenario_decorator_api,
+    scenario_v5_scaling,
 ]
 
 

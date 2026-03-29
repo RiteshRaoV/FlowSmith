@@ -9,7 +9,7 @@ from contextlib import suppress
 from flowforge.context import Context
 from flowforge.exceptions import StepFailed, StepTimeoutError
 from flowforge.models import FlowRecord
-from flowforge.step import Step
+from flowforge.step import ParallelGroup, Step
 from flowforge.storage.base import StorageBackend
 
 logger = logging.getLogger("flowforge.executor")
@@ -169,12 +169,38 @@ class Executor:
     def __init__(self, storage: StorageBackend):
         self._storage = storage
 
-    def run(self, flow: FlowRecord, steps: list[Step], ctx: Context) -> None:
+    def run(self, flow: FlowRecord, steps: list[Step | ParallelGroup], ctx: Context) -> None:
         """
-        Execute all steps in order. Modifies ctx in-place as steps complete.
+        Execute all steps (or step groups) in order. Modifies ctx in-place as tasks complete.
         """
-        for step in steps:
-            self._execute_step(flow, step, ctx)
+        for item in steps:
+            if isinstance(item, ParallelGroup):
+                self._execute_group(flow, item, ctx)
+            else:
+                self._execute_step(flow, item, ctx)
+
+    def _execute_group(self, flow: FlowRecord, group: ParallelGroup, ctx: Context) -> None:
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        if not group.steps:
+            return
+
+        with ThreadPoolExecutor(max_workers=len(group.steps)) as pool:
+            futures = [
+                pool.submit(self._execute_step, flow, step, ctx) 
+                for step in group.steps
+            ]
+
+            exceptions = []
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as exc:
+                    exceptions.append(exc)
+            
+            if exceptions:
+                # Raise the first exception to fail the group iteration
+                raise exceptions[0]
 
     def _execute_step(self, flow: FlowRecord, step: Step, ctx: Context) -> None:
         node = self._storage.get_node(flow.id, step.name)
