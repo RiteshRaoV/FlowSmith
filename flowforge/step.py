@@ -28,6 +28,7 @@ class Step:
     backoff: str = "fixed"
     backoff_base: float = 0.0
     timeout: int | None = None
+    condition: Callable | None = None
 
     def __post_init__(self):
         if self.retries < 1:

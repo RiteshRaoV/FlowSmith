@@ -99,3 +99,40 @@ def test_failed_step_marks_flow_as_failed():
     record = storage.get_flow("f1")
     assert record.status == "FAILED"
     assert "boom" in record.error
+
+
+def test_flow_condition_parameter():
+    """
+    Test that the condition argument on Flow.step bypasses execution.
+    """
+    storage = InMemoryStorage()
+    flow = Flow("condition_flow", storage=storage)
+    
+    # Step 1 always runs
+    flow.step("step_1", lambda ctx: {"run": True})
+    
+    # Step 2 condition evaluates to True -> will execute
+    flow.step(
+        "step_2", 
+        lambda ctx: {"executed": True},
+        condition=lambda ctx: ctx.data["step_1"]["run"] is True
+    )
+    
+    # Step 3 condition evaluates to False -> will skip
+    flow.step(
+        "step_3", 
+        lambda ctx: {"executed": False}, 
+        condition=lambda ctx: ctx.data.get("step_2", {}).get("missing_key") == "yes"
+    )
+    
+    ctx = Context({})
+    flow.run(ctx, tracking_id="cond-1")
+    
+    # Verify outputs populated correctly
+    assert ctx.data["step_1"]["run"] is True
+    assert ctx.data["step_2"]["executed"] is True
+    assert "step_3" not in ctx.data  # Skipped, output not stored
+    
+    # Verify skipped step created no DB record
+    assert storage.get_node("cond-1", "step_3") is None
+

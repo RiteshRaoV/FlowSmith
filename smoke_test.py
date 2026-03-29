@@ -423,6 +423,51 @@ def scenario_watchdog(storage, backend: str):
 
 
 # ---------------------------------------------------------------------------
+# Scenario 8: Decorator API and Conditional Branching
+# ---------------------------------------------------------------------------
+
+def scenario_decorator_api(storage, backend: str):
+    _header("Scenario 8: Decorator API — nested builder and branching", backend)
+    _cleanup(storage)
+
+    from flowforge.decorators import workflow, step
+
+    @workflow("decorator_checkout")
+    def checkout_flow():
+        @step(retries=1)
+        def fetch_product(ctx):
+            return {"price": 100, "valid": True}
+
+        @step(condition=lambda ctx: ctx.data["fetch_product"]["valid"])
+        def charge_payment(ctx):
+            return {"status": "paid"}
+
+        # Condition evaluates to False, so this step is skipped entirely
+        @step(condition=lambda ctx: ctx.data["fetch_product"]["price"] > 500)
+        def skipped_manager_approval(ctx):
+            return {"status": "approved"}
+
+        @step(retries=1)
+        def send_receipt(ctx):
+            return {"sent": True}
+
+    tid = _tracking_id()
+    ctx = Context({"user_id": "u_999"})
+    
+    checkout_flow(ctx, tracking_id=tid)
+
+    record = storage.get_flow(tid)
+    _assert(record.status == "COMPLETED", "decorator flow is COMPLETED")
+
+    _assert("fetch_product" in ctx.data, "step 1 executed")
+    _assert("charge_payment" in ctx.data, "step 2 executed (condition=True)")
+    _assert("skipped_manager_approval" not in ctx.data, "step 3 skipped (condition=False)")
+    _assert("send_receipt" in ctx.data, "step 4 executed")
+
+    _assert(storage.get_node(tid, "skipped_manager_approval") is None, "skipped step left no node record")
+
+
+# ---------------------------------------------------------------------------
 # Runner
 # ---------------------------------------------------------------------------
 
@@ -434,10 +479,13 @@ SCENARIOS = [
     scenario_step_timeout,
     scenario_idempotency,
     scenario_watchdog,
+    scenario_decorator_api,
 ]
 
 
 def run_all_for_backend(storage, backend_name: str):
+    import flowforge.config
+    flowforge.config._storage = storage  # Provide global context for decorators
     for scenario in SCENARIOS:
         try:
             scenario(storage, backend_name)

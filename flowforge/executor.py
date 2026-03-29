@@ -186,6 +186,10 @@ class Executor:
             logger.debug("Step '%s' already completed — skipped", step.name)
             return
 
+        if step.condition is not None and not step.condition(ctx):
+            logger.info("Step '%s' condition evaluated to False — skipped", step.name)
+            return
+
         last_exception: Exception | None = None
 
         for attempt in range(1, step.retries + 1):

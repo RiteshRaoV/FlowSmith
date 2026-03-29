@@ -135,6 +135,34 @@ flow.run(
 
 ---
 
+## The Decorator API (v0.4+)
+
+FlowForge supports a powerful Context-Aware Builder Pattern using decorators. This allows you to define workflows naturally and introduces built-in conditional branching.
+
+```python
+from flowforge.decorators import workflow, step
+
+@workflow("checkout_process")
+def process_order():
+    
+    # Python evaluates this first, so it's Step 1
+    @step(retries=3)
+    def fetch_inventory(ctx):
+        return {"in_stock": True, "price": 100}
+
+    # Conditional Branching: This step is skipped if the lambda returns False
+    @step(condition=lambda ctx: ctx.data["fetch_inventory"]["in_stock"])
+    def reserve_items(ctx):
+        pass
+
+# Triggering the nested workflow:
+process_order(Context({"order_id": 999}), tracking_id="tr_abc123")
+```
+
+The decorator natively handles retries, pausing on crashes, and skipped steps, exactly like the standard API, but keeps your code clean and composable.
+
+---
+
 ## Core guarantees
 
 | Guarantee | What it means |
@@ -298,9 +326,9 @@ flowforge/
 | **v0.1.0** | Core engine, InMemoryStorage, sequential execution |
 | **v0.2.0** | PostgresStorage, MySQLStorage, migrate CLI, watchdog |
 | **v0.3.0** | Connection pooling, retry backoff strategies, per-step timeout |
-| **v0.3.1** | Bugfixes: stuck-node SQL, cross-platform thread handling, executor logging, CI on PRs, py.typed ← current |
-| v0.4.0 | Decorator API, parallel step execution, conditional branching |
-| v0.5.0 | Async execution, DAG support |
+| **v0.3.1** | Bugfixes: stuck-node SQL, cross-platform thread handling, CI on PRs, py.typed |
+| **v0.4.0** | Decorator API builder pattern, conditional branching ← current |
+| v0.5.0 | Async execution, DAG support, parallel step execution |
 | v1.0.0 | Stable API, battle tested in production |
 
 ---

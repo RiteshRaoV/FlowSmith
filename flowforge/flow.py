@@ -36,6 +36,7 @@ class Flow:
         backoff: str = "fixed",
         backoff_base: float = 0.0,
         timeout: int | None = None,
+        condition: Callable | None = None,
     ) -> "Flow":
         """
         Register a step on this flow.
@@ -53,6 +54,8 @@ class Flow:
             timeout:      Max seconds a single attempt may run. None = no timeout.
                           On timeout: StepTimeoutError is raised and the attempt
                           counts as a failure — retried if attempts remain.
+            condition:    Predicate func (ctx: Context) -> bool. If returns False,
+                          the step is skipped during execution.
 
         Returns self for optional chaining.
         """
@@ -63,6 +66,7 @@ class Flow:
             backoff=backoff,
             backoff_base=backoff_base,
             timeout=timeout,
+            condition=condition,
         ))
         return self
 
