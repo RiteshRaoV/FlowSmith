@@ -222,25 +222,34 @@ flow.run(ctx, tracking_id="test-1")
 
 ## Local development
 
+**Note:** 
+* Requires Docker for integration tests
+* Databases must be running before migrations/tests
+* Uses PostgreSQL + MySQL via docker-compose
+* CLI works on Windows, macOS, and Linux
+
 ```bash
 # Start both databases
-docker-compose up -d
+flowforge db-up
 
 # Run migrations
-make migrate-postgres
-make migrate-mysql
+flowforge migrate-postgres
+flowforge migrate-mysql
 
 # Install dev dependencies
-make install
+flowforge install
 
 # Unit tests — no database needed, runs in milliseconds
-make test-unit
+flowforge test-unit
 
 # Integration tests — requires running databases
-make test-integration
+flowforge test-integration
 
 # All tests with coverage
-make test
+flowforge test
+
+#Stop both databases
+flowforge db-down
 ```
 
 ---
@@ -282,8 +291,8 @@ flowforge/
 | Version | Scope |
 |---------|-------|
 | **v0.1.0** | Core engine, InMemoryStorage, sequential execution |
-| **v0.2.0** | PostgresStorage, MySQLStorage, migrate CLI, watchdog ← current |
-| v0.3.0 | Connection pooling, retry backoff strategies, per-step timeout |
+| **v0.2.0** | PostgresStorage, MySQLStorage, migrate CLI, watchdog |
+| **v0.3.0** | Connection pooling, retry backoff strategies, per-step timeout ← current |
 | v0.4.0 | Parallel step execution, conditional branching |
 | v0.5.0 | Async execution, DAG support |
 | v1.0.0 | Stable API, battle tested in production |

@@ -4,14 +4,31 @@ Usage:
     flowforge migrate --url postgresql://user:pass@localhost/db
     flowforge migrate --url mysql://user:pass@localhost/db
     flowforge migrate  # reads DATABASE_URL from environment
+
+    flowforge install
+    flowforge test
+    flowforge test-unit
+    flowforge test-integration
+    flowforge db-up
+    flowforge db-down
 """
 
 import argparse
 import os
 import sys
+import subprocess
 from pathlib import Path
 
 MIGRATIONS_DIR = Path(__file__).parent / "migrations"
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def run(cmd: list[str]):
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
 
 
 def detect_dialect(url: str) -> str:
@@ -131,7 +148,6 @@ def cmd_migrate(args) -> None:
             "Examples:\n"
             "  flowforge migrate --url postgresql://user:pass@localhost/mydb\n"
             "  flowforge migrate --url mysql://user:pass@localhost/mydb\n"
-            "  export DATABASE_URL=postgresql://... && flowforge migrate"
         )
         sys.exit(1)
 
@@ -162,20 +178,61 @@ def main() -> None:
     )
     subparsers = parser.add_subparsers(dest="command")
 
-    migrate_parser = subparsers.add_parser(
-        "migrate",
-        help="Create FlowForge tables in your database",
-    )
-    migrate_parser.add_argument(
-        "--url",
-        help="Database URL (or set DATABASE_URL env var)",
-        default=None,
-    )
+    # Core
+    migrate_parser = subparsers.add_parser("migrate", help="Run database migrations")
+    migrate_parser.add_argument("--url", help="Database URL", default=None)
+
+    # Dev commands
+    subparsers.add_parser("install")
+    subparsers.add_parser("test")
+    subparsers.add_parser("test-unit")
+    subparsers.add_parser("test-integration")
+    subparsers.add_parser("db-up")
+    subparsers.add_parser("db-down")
+
+    # Shortcuts
+    subparsers.add_parser("migrate-postgres")
+    subparsers.add_parser("migrate-mysql")
 
     args = parser.parse_args()
 
     if args.command == "migrate":
         cmd_migrate(args)
+
+    elif args.command == "install":
+        run([sys.executable, "-m", "pip", "install", "-e", ".[dev]"])
+
+    elif args.command == "test":
+        run(["pytest", "tests/", "-v", "--cov=flowforge", "--cov-report=term-missing"])
+
+    elif args.command == "test-unit":
+        run(["pytest", "tests/unit/", "-v"])
+
+    elif args.command == "test-integration":
+        run(["pytest", "tests/integration/", "-v", "-m", "integration"])
+
+    elif args.command == "db-up":
+        run(["docker", "compose", "up", "-d"])
+
+    elif args.command == "db-down":
+        run(["docker", "compose", "down"])
+
+    elif args.command == "migrate-postgres":
+        run([
+            "flowforge",
+            "migrate",
+            "--url",
+            "postgresql://flowforge:flowforge@localhost/flowforge",
+        ])
+
+    elif args.command == "migrate-mysql":
+        run([
+            "flowforge",
+            "migrate",
+            "--url",
+            "mysql://flowforge:flowforge@localhost/flowforge",
+        ])
+
     else:
         parser.print_help()
 

@@ -12,6 +12,7 @@ import os
 import uuid
 
 import pytest
+from sqlalchemy import text
 
 pytestmark = pytest.mark.integration
 
@@ -25,19 +26,19 @@ def mysql_storage():
         from flowforge.storage.mysql import MySQLStorage
         storage = MySQLStorage(url=url)
         yield storage
-        storage._conn.close()
+        storage._engine.dispose()
     except Exception as e:
         pytest.skip(f"MySQL not available: {e}")
 
 
 @pytest.fixture(autouse=True)
 def cleanup(mysql_storage):
+    """Remove test rows after each test."""
     yield
-    cur = mysql_storage._cur()
-    cur.execute("DELETE FROM ff_nodes WHERE flow_id LIKE 'test-%'")
-    cur.execute("DELETE FROM ff_flows WHERE id LIKE 'test-%'")
-    mysql_storage._conn.commit()
-    cur.close()
+    with mysql_storage._conn() as conn:
+        conn.execute(text("DELETE FROM ff_nodes WHERE flow_id LIKE 'test-%'"))
+        conn.execute(text("DELETE FROM ff_flows WHERE id LIKE 'test-%'"))
+        conn.commit()
 
 
 def test_create_and_get_flow(mysql_storage):
