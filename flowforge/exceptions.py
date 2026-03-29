@@ -24,6 +24,22 @@ class StepFailed(Exception):
         )
 
 
+class StepTimeoutError(Exception):
+    """
+    Raised when a step exceeds its configured timeout.
+    Treated as a retryable failure — the step will be retried
+    if attempts remain, with backoff applied.
+    """
+    def __init__(self, step_name: str, timeout: int, attempt: int):
+        self.step_name = step_name
+        self.timeout = timeout
+        self.attempt = attempt
+        super().__init__(
+            f"Step '{step_name}' timed out after {timeout}s "
+            f"(attempt {attempt})"
+        )
+
+
 class FlowAlreadyCompleted(Exception):
     """
     Raised when flow.run() is called with a tracking_id that already

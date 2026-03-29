@@ -26,21 +26,44 @@ class Flow:
     def __init__(self, name: str, storage: StorageBackend | None = None):
         self.name = name
         self._steps: list[Step] = []
-        self._storage_override = storage  # None = use global config
+        self._storage_override = storage
 
-    def step(self, name: str, fn: Callable, retries: int = 1) -> "Flow":
+    def step(
+        self,
+        name: str,
+        fn: Callable,
+        retries: int = 1,
+        backoff: str = "fixed",
+        backoff_base: float = 0.0,
+        timeout: int | None = None,
+    ) -> "Flow":
         """
         Register a step on this flow.
 
         Args:
-            name:    Unique step identifier. Used as the DB key and ctx.data key.
-            fn:      Callable with signature (ctx: Context) -> dict.
-            retries: Total attempts including the first. retries=3 means
-                     the step will be tried up to 3 times before failing.
+            name:         Unique step identifier. Used as the DB key and ctx.data key.
+            fn:           Callable with signature (ctx: Context) -> dict.
+            retries:      Total attempts including the first. retries=3 means
+                          the step will be tried up to 3 times before failing.
+            backoff:      Delay strategy between retries.
+                            "fixed"       — constant backoff_base seconds
+                            "exponential" — backoff_base * 2^(attempt-1), capped at 60s
+                            "jitter"      — exponential + random noise (avoids thundering herd)
+            backoff_base: Base delay in seconds. Default 0.0 (instant retry).
+            timeout:      Max seconds a single attempt may run. None = no timeout.
+                          On timeout: StepTimeoutError is raised and the attempt
+                          counts as a failure — retried if attempts remain.
 
         Returns self for optional chaining.
         """
-        self._steps.append(Step(name=name, fn=fn, retries=retries))
+        self._steps.append(Step(
+            name=name,
+            fn=fn,
+            retries=retries,
+            backoff=backoff,
+            backoff_base=backoff_base,
+            timeout=timeout,
+        ))
         return self
 
     def run(self, ctx: Context, tracking_id: str) -> None:

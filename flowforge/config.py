@@ -8,14 +8,23 @@ _storage: StorageBackend | None = None
 _watchdog = None   # type: ignore
 
 
-def _make_storage(database_url: str) -> StorageBackend:
+def _make_storage(
+    database_url: str,
+    pool_min: int,
+    pool_max: int,
+    pool_timeout: int,
+) -> StorageBackend:
+    """
+    Instantiate the correct backend from the database URL scheme.
+    All pool params are passed through to the backend.
+    """
     if database_url.startswith("postgresql://") or database_url.startswith("postgres://"):
         from flowforge.storage.postgres import PostgresStorage
-        return PostgresStorage(url=database_url)
+        return PostgresStorage(url=database_url, pool_min=pool_min, pool_max=pool_max, pool_timeout=pool_timeout)
 
     if database_url.startswith("mysql://"):
         from flowforge.storage.mysql import MySQLStorage
-        return MySQLStorage(url=database_url)
+        return MySQLStorage(url=database_url, pool_min=pool_min, pool_max=pool_max, pool_timeout=pool_timeout)
 
     raise ValueError(
         f"Unsupported database URL scheme: '{database_url.split('://')[0]}'\n"
@@ -23,14 +32,23 @@ def _make_storage(database_url: str) -> StorageBackend:
     )
 
 
-def configure(database_url: str) -> None:
+def configure(
+    database_url: str,
+    pool_min: int = 2,
+    pool_max: int = 10,
+    pool_timeout: int = 30,
+) -> None:
     """
-    Initialise FlowForge with a database URL.
+    Initialise FlowForge with a database URL and connection pool settings.
     Call once at server startup.
 
-    Supports:
-        postgresql://user:password@host:port/dbname
-        mysql://user:password@host:port/dbname
+    Args:
+        database_url: PostgreSQL or MySQL connection string.
+                      postgresql://user:password@host:port/dbname
+                      mysql://user:password@host:port/dbname
+        pool_min:     Minimum connections kept alive in the pool. Default 2.
+        pool_max:     Maximum connections in the pool. Default 10.
+        pool_timeout: Seconds to wait for a connection before raising. Default 30.
 
     Thread-safe and idempotent — calling again with the same URL is a no-op.
     Raises ValueError if called again with a different URL.
@@ -47,7 +65,7 @@ def configure(database_url: str) -> None:
                 )
             return
 
-        _storage = _make_storage(database_url)
+        _storage = _make_storage(database_url, pool_min, pool_max, pool_timeout)
 
 
 def start_watchdog(

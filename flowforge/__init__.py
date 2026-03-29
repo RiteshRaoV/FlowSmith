@@ -23,6 +23,7 @@ from flowforge.exceptions import (
     FlowAlreadyCompleted,
     FlowForgeNotConfigured,
     StepFailed,
+    StepTimeoutError,
 )
 from flowforge.flow import Flow
 
@@ -39,7 +40,8 @@ __all__ = [
     # Exceptions
     "FlowForgeNotConfigured",
     "StepFailed",
+    "StepTimeoutError",
     "FlowAlreadyCompleted",
 ]
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
