@@ -15,8 +15,8 @@ Usage:
 
 import argparse
 import os
-import sys
 import subprocess
+import sys
 from pathlib import Path
 
 MIGRATIONS_DIR = Path(__file__).parent / "migrations"
