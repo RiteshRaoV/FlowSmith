@@ -18,6 +18,7 @@ notify(user_id, payment["id"])
 ```
 
 Writing this is easy. Making it production-safe is not. What happens when:
+
 - `create_payment` succeeds but the process crashes before `notify` runs?
 - `call_payments_api` times out on attempt 1 but would succeed on attempt 2?
 - You need to know exactly which step failed and why?
@@ -144,7 +145,7 @@ from flowforge.decorators import workflow, step
 
 @workflow("checkout_process")
 def process_order():
-    
+
     # Python evaluates this first, so it's Step 1
     @step(retries=3)
     def fetch_inventory(ctx):
@@ -172,14 +173,14 @@ from flowforge.decorators import workflow, step, parallel, subflow
 
 @workflow("analytics_pipeline")
 def process_data():
-    
+
     # 1. Parallel execution block
     # Everything inside this block runs concurrently!
     @parallel
     def fetch_phase():
         @step
         def get_users(ctx): ...
-        
+
         @step
         def get_products(ctx): ...
 
@@ -193,33 +194,49 @@ def process_data():
     @subflow
     def alert_email(ctx):
         return {
-            "flow": send_email_flow, 
+            "flow": send_email_flow,
             "tracking_id": f"mail_{ctx.data['user_id']}"
         }
 
 ```
 
 > For power users: `flow.parallel()` and `flow.subflow()` are fully available on the native builder API as well!
+>
+> ```python
+> # 1. Parallel Execution
+> with flow.parallel():
+>     flow.step("get_users", get_users)
+>     flow.step("get_products", get_products)
+>
+> flow.step("generate_report", generate_report)
+>
+> # 2. Subflow
+> flow.subflow(
+>     "alert_email",
+>     send_email_flow,
+>     tracking_id=lambda ctx: f"mail_{ctx.data['user_id']}"
+> )
+> ```
 
 ---
 
 ## Core guarantees
 
-| Guarantee | What it means |
-|-----------|---------------|
-| Completed steps never re-run | If `get_product` succeeded, it is skipped on every subsequent retry |
-| Resume from last success | A flow that failed on step 3 resumes at step 3, not step 1 |
-| At-least-once execution | If a process crashes mid-step, that step will re-run on resume |
-| Full execution trace | Every step's input, output, error, and attempt count is stored |
-| Idempotent trigger | Calling `flow.run()` with the same `tracking_id` resumes, never duplicates |
+| Guarantee                    | What it means                                                              |
+| ---------------------------- | -------------------------------------------------------------------------- |
+| Completed steps never re-run | If `get_product` succeeded, it is skipped on every subsequent retry        |
+| Resume from last success     | A flow that failed on step 3 resumes at step 3, not step 1                 |
+| At-least-once execution      | If a process crashes mid-step, that step will re-run on resume             |
+| Full execution trace         | Every step's input, output, error, and attempt count is stored             |
+| Idempotent trigger           | Calling `flow.run()` with the same `tracking_id` resumes, never duplicates |
 
-> **Note on at-least-once:** FlowForge guarantees completed steps are never re-run. Steps that were *in progress* when a crash happened will be retried. Make your step functions idempotent (safe to run more than once) for full crash safety.
+> **Note on at-least-once:** FlowForge guarantees completed steps are never re-run. Steps that were _in progress_ when a crash happened will be retried. Make your step functions idempotent (safe to run more than once) for full crash safety.
 
 ---
 
 ## The watchdog
 
-The watchdog solves a subtle but critical problem: what happens when a process crashes *after* a node is marked `RUNNING` but *before* it is marked `COMPLETED`?
+The watchdog solves a subtle but critical problem: what happens when a process crashes _after_ a node is marked `RUNNING` but _before_ it is marked `COMPLETED`?
 
 Without intervention, that node stays `RUNNING` in the database forever — the flow can never be resumed because FlowForge sees it as still in progress.
 
@@ -264,11 +281,11 @@ flow.run(ctx, tracking_id="order_abc123")
 flow.run(ctx, tracking_id="order_abc123")
 ```
 
-| Flow status on second call | Behaviour |
-|---------------------------|-----------|
-| Not found | Fresh execution |
-| `RUNNING` or `FAILED` | Resume from last completed step |
-| `COMPLETED` | Raises `FlowAlreadyCompleted` |
+| Flow status on second call | Behaviour                       |
+| -------------------------- | ------------------------------- |
+| Not found                  | Fresh execution                 |
+| `RUNNING` or `FAILED`      | Resume from last completed step |
+| `COMPLETED`                | Raises `FlowAlreadyCompleted`   |
 
 ---
 
@@ -276,10 +293,10 @@ flow.run(ctx, tracking_id="order_abc123")
 
 FlowForge supports PostgreSQL and MySQL via the same `StorageBackend` interface. The backend is selected automatically from your database URL.
 
-| URL prefix | Backend |
-|------------|---------|
+| URL prefix                       | Backend           |
+| -------------------------------- | ----------------- |
 | `postgresql://` or `postgres://` | `PostgresStorage` |
-| `mysql://` | `MySQLStorage` |
+| `mysql://`                       | `MySQLStorage`    |
 
 For testing, use `InMemoryStorage` — no database required:
 
@@ -295,11 +312,12 @@ flow.run(ctx, tracking_id="test-1")
 
 ## Local development
 
-**Note:** 
-* Requires Docker for integration tests
-* Databases must be running before migrations/tests
-* Uses PostgreSQL + MySQL via docker-compose
-* CLI works on Windows, macOS, and Linux
+**Note:**
+
+- Requires Docker for integration tests
+- Databases must be running before migrations/tests
+- Uses PostgreSQL + MySQL via docker-compose
+- CLI works on Windows, macOS, and Linux
 
 ```bash
 # Start both databases
@@ -321,7 +339,10 @@ flowforge test-integration
 # All tests with coverage
 flowforge test
 
-#Stop both databases
+# Smoke tests — execute realistic end-to-end execution flow
+python smoke_test.py
+
+# Stop both databases
 flowforge db-down
 ```
 
@@ -351,7 +372,7 @@ flowforge/
 │   ├── migrations/
 │   │   ├── postgres/      # PostgreSQL migration files
 │   │   └── mysql/         # MySQL migration files
-│   └── contrib/           # Optional integrations — v0.4+ (decorator API, Django hook)
+│   └── contrib/           # Optional integrations
 └── tests/
     ├── unit/              # Fast tests using InMemoryStorage — no infrastructure needed
     └── integration/       # Real database tests — requires docker-compose
@@ -361,16 +382,16 @@ flowforge/
 
 ## Roadmap
 
-| Version | Scope |
-|---------|-------|
-| **v0.1.0** | Core engine, InMemoryStorage, sequential execution |
-| **v0.2.0** | PostgresStorage, MySQLStorage, migrate CLI, watchdog |
-| **v0.3.0** | Connection pooling, retry backoff strategies, per-step timeout |
-| **v0.3.1** | Bugfixes: stuck-node SQL, cross-platform thread handling, CI on PRs, py.typed |
-| **v0.4.0** | Decorator API builder pattern, conditional branching |
-| **v0.5.0** | Parallel step execution, First-class blocking sub-flows ← current |
-| v0.6.0 | Fire-and-forget daemon background workers, dashboard GUI |
-| v1.0.0 | Stable API, battle tested in production |
+| Version    | Scope                                                                                             |
+| ---------- | ------------------------------------------------------------------------------------------------- |
+| **v0.1.0** | Core engine, InMemoryStorage, sequential execution                                                |
+| **v0.2.0** | PostgresStorage, MySQLStorage, migrate CLI, watchdog                                              |
+| **v0.3.0** | Connection pooling, retry backoff strategies, per-step timeout                                    |
+| **v0.3.1** | Bugfixes: stuck-node SQL, cross-platform thread handling, CI on PRs, py.typed                     |
+| **v0.4.0** | Decorator API builder pattern, conditional branching                                              |
+| **v0.5.0** | Parallel step execution, First-class blocking sub-flows ← current                                 |
+| v0.6.0     | PyPI Public Release, Community outreach, Fire-and-forget daemon background workers, dashboard GUI |
+| v1.0.0     | Stable API, battle tested in production                                                           |
 
 ---
 
