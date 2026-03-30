@@ -59,7 +59,7 @@ def test_subflow_builder_api():
     parent.subflow(
         "trigger", 
         child, 
-        get_tracking_id=lambda ctx: f"child_t_{ctx.data['id']}"
+        tracking_id=lambda ctx: f"child_t_{ctx.data['id']}"
     )
 
     ctx = Context({"id": "abc"})

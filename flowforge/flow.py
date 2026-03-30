@@ -95,7 +95,7 @@ class Flow:
         self,
         name: str,
         flow: "Flow",
-        get_tracking_id: Callable[[Context], str],
+        tracking_id: str | Callable[[Context], str],
         retries: int = 1,
         backoff: str = "fixed",
         backoff_base: float = 0.0,
@@ -106,11 +106,12 @@ class Flow:
         Formally register an embedded sub-flow as a step execution.
 
         Args:
-            flow:             The Flow instance to trigger.
-            get_tracking_id:  Lambda mapping current Context to the child flow's tracking_id.
+            flow:         The Flow instance to trigger.
+            tracking_id:  Either a static string or a callable (ctx) -> str
+                          for dynamic tracking IDs based on runtime context.
         """
         def _subflow_runner(ctx: Context) -> dict:
-            tid = get_tracking_id(ctx)
+            tid = tracking_id(ctx) if callable(tracking_id) else tracking_id
             flow.run(ctx, tracking_id=tid)
             return {"tracking_id": tid, "status": "COMPLETED"}
 
