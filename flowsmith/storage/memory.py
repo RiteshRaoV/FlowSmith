@@ -3,8 +3,8 @@ from copy import deepcopy
 from datetime import UTC, datetime
 from typing import Any
 
-from flowforge.models import FlowRecord, NodeRecord
-from flowforge.storage.base import StorageBackend
+from flowsmith.models import FlowRecord, NodeRecord
+from flowsmith.storage.base import StorageBackend
 
 
 def _now() -> datetime:

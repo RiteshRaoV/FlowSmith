@@ -1,14 +1,14 @@
 """
-FlowForge — Production Smoke Test
+FlowSmith — Production Smoke Test
 ==================================
 
 Runs real-world scenarios against both PostgreSQL and MySQL to verify
 the package works end-to-end with actual database backends.
 
 Prerequisites:
-    flowforge db-up           # start Postgres + MySQL via docker-compose
-    flowforge migrate-postgres
-    flowforge migrate-mysql
+    flowsmith db-up           # start Postgres + MySQL via docker-compose
+    flowsmith migrate-postgres
+    flowsmith migrate-mysql
 
 Run:
     python smoke_test.py
@@ -23,10 +23,10 @@ import sys
 import time
 import uuid
 
-import flowforge
-from flowforge import Context, Flow, FlowAlreadyCompleted, StepFailed
-from flowforge.storage.postgres import PostgresStorage
-from flowforge.storage.mysql import MySQLStorage
+import flowsmith
+from flowsmith import Context, Flow, FlowAlreadyCompleted, StepFailed
+from flowsmith.storage.postgres import PostgresStorage
+from flowsmith.storage.mysql import MySQLStorage
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -34,11 +34,11 @@ from flowforge.storage.mysql import MySQLStorage
 
 POSTGRES_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql://flowforge:flowforge@localhost:5432/flowforge",
+    "postgresql://flowsmith:flowsmith@localhost:5432/flowsmith",
 )
 MYSQL_URL = os.environ.get(
     "MYSQL_URL",
-    "mysql://flowforge:flowforge@localhost:3306/flowforge",
+    "mysql://flowsmith:flowsmith@localhost:3306/flowsmith",
 )
 
 # Enable executor logging so we can see retry/backoff/timeout messages
@@ -67,8 +67,8 @@ def _cleanup(storage):
     """Delete all flow and node records. Nodes cascade from flows."""
     from sqlalchemy import text
     with storage._engine.connect() as conn:
-        conn.execute(text("DELETE FROM ff_nodes"))
-        conn.execute(text("DELETE FROM ff_flows"))
+        conn.execute(text("DELETE FROM fs_nodes"))
+        conn.execute(text("DELETE FROM fs_flows"))
         conn.commit()
 
 
@@ -381,14 +381,14 @@ def scenario_watchdog(storage, backend: str):
 
     with storage._engine.connect() as conn:
         conn.execute(text(
-            "INSERT INTO ff_flows (id, name, status, input_data, created_at, updated_at) "
+            "INSERT INTO fs_flows (id, name, status, input_data, created_at, updated_at) "
             "VALUES (:id, :name, 'RUNNING', '{}', :now, :now)"
         ), {"id": tid, "name": "stuck_flow", "now": stuck_time})
         conn.commit()
 
     with storage._engine.connect() as conn:
         conn.execute(text(
-            "INSERT INTO ff_nodes (id, flow_id, step_name, status, attempt_count, started_at) "
+            "INSERT INTO fs_nodes (id, flow_id, step_name, status, attempt_count, started_at) "
             "VALUES (:id, :flow_id, :step_name, 'RUNNING', 1, :started)"
         ), {"id": str(uuid.uuid4()), "flow_id": tid, "step_name": "stuck_step",
             "started": stuck_time})
@@ -402,7 +402,7 @@ def scenario_watchdog(storage, backend: str):
     _assert(found, "our stuck node is in the results")
 
     # Run the watchdog scan manually
-    from flowforge.watchdog import Watchdog
+    from flowsmith.watchdog import Watchdog
     wd = Watchdog(storage=storage, timeout_seconds=300, interval_seconds=60)
     wd._scan()  # run one scan cycle directly
 
@@ -430,7 +430,7 @@ def scenario_decorator_api(storage, backend: str):
     _header("Scenario 8: Decorator API — nested builder and branching", backend)
     _cleanup(storage)
 
-    from flowforge.decorators import workflow, step
+    from flowsmith.decorators import workflow, step
 
     @workflow("decorator_checkout")
     def checkout_flow():
@@ -474,7 +474,7 @@ def scenario_v5_scaling(storage, backend: str):
     _header("Scenario 9: v0.5 Scaling — Parallel Groups & Subflows", backend)
     _cleanup(storage)
 
-    from flowforge.decorators import workflow, step, parallel, subflow
+    from flowsmith.decorators import workflow, step, parallel, subflow
 
     @workflow("child_smoke")
     def smoke_subflow():
@@ -552,8 +552,8 @@ SCENARIOS = [
 
 
 def run_all_for_backend(storage, backend_name: str):
-    import flowforge.config
-    flowforge.config._storage = storage  # Provide global context for decorators
+    import flowsmith.config
+    flowsmith.config._storage = storage  # Provide global context for decorators
     for scenario in SCENARIOS:
         try:
             scenario(storage, backend_name)
@@ -567,8 +567,8 @@ def main():
     global _pass_count, _fail_count
 
     print("=" * 60)
-    print("  FlowForge Production Smoke Test")
-    print(f"  Version: {flowforge.__version__}")
+    print("  FlowSmith Production Smoke Test")
+    print(f"  Version: {flowsmith.__version__}")
     print("=" * 60)
 
     # --- PostgreSQL ---
@@ -582,7 +582,7 @@ def main():
         run_all_for_backend(pg, "PostgreSQL")
     except Exception as e:
         print(f"\n  ⚠  PostgreSQL unavailable: {e}")
-        print("     Skipping PostgreSQL tests. Is the DB running? (flowforge db-up)")
+        print("     Skipping PostgreSQL tests. Is the DB running? (flowsmith db-up)")
 
     # --- MySQL ---
     print(f"\n{'━' * 60}")
@@ -595,7 +595,7 @@ def main():
         run_all_for_backend(my, "MySQL")
     except Exception as e:
         print(f"\n  ⚠  MySQL unavailable: {e}")
-        print("     Skipping MySQL tests. Is the DB running? (flowforge db-up)")
+        print("     Skipping MySQL tests. Is the DB running? (flowsmith db-up)")
 
     # --- Summary ---
     total = _pass_count + _fail_count

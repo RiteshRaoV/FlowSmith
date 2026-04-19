@@ -16,14 +16,14 @@ from sqlalchemy import text
 
 pytestmark = pytest.mark.integration
 
-PG_URL = "postgresql://flowforge:flowforge@localhost/flowforge"
+PG_URL = "postgresql://flowsmith:flowsmith@localhost/flowsmith"
 
 
 @pytest.fixture(scope="module")
 def pg_storage():
     url = os.environ.get("DATABASE_URL", PG_URL)
     try:
-        from flowforge.storage.postgres import PostgresStorage
+        from flowsmith.storage.postgres import PostgresStorage
         storage = PostgresStorage(url=url)
         yield storage
         storage._engine.dispose()
@@ -36,8 +36,8 @@ def cleanup(pg_storage):
     """Remove test rows after each test."""
     yield
     with pg_storage._conn() as conn:
-        conn.execute(text("DELETE FROM ff_nodes WHERE flow_id LIKE 'test-%'"))
-        conn.execute(text("DELETE FROM ff_flows WHERE id LIKE 'test-%'"))
+        conn.execute(text("DELETE FROM fs_nodes WHERE flow_id LIKE 'test-%'"))
+        conn.execute(text("DELETE FROM fs_flows WHERE id LIKE 'test-%'"))
         conn.commit()
 
 

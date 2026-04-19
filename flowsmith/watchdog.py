@@ -1,13 +1,13 @@
 """
-FlowForge Watchdog
+FlowSmith Watchdog
 
 Detects nodes stuck in RUNNING status after a process crash and
 transitions them to FAILED so the flow can be resumed.
 
 Usage:
-    import flowforge
-    flowforge.configure(database_url=os.environ["DATABASE_URL"])
-    flowforge.start_watchdog(timeout_seconds=300, interval_seconds=60)
+    import flowsmith
+    flowsmith.configure(database_url=os.environ["DATABASE_URL"])
+    flowsmith.start_watchdog(timeout_seconds=300, interval_seconds=60)
 
 The watchdog runs in a daemon thread — it stops automatically when
 the main process exits. No cleanup required.
@@ -17,7 +17,7 @@ import logging
 import threading
 from typing import Any
 
-logger = logging.getLogger("flowforge.watchdog")
+logger = logging.getLogger("flowsmith.watchdog")
 
 
 class Watchdog:
@@ -61,7 +61,7 @@ class Watchdog:
         self._stop_event.clear()
         self._thread = threading.Thread(
             target=self._loop,
-            name="flowforge-watchdog",
+            name="flowsmith-watchdog",
             daemon=True,
         )
         self._thread.start()

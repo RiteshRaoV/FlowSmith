@@ -26,10 +26,10 @@ jobs:
         run: pip install -e ".[dev]"
 
       - name: Run ruff
-        run: ruff check flowforge/ tests/
+        run: ruff check flowsmith/ tests/
 
       - name: Run mypy
-        run: mypy flowforge/
+        run: mypy flowsmith/
 
   # ---------------------------------------------------------------------------
   # Job 2: Unit tests — no database, runs in seconds
@@ -70,13 +70,13 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER:     flowforge
-          POSTGRES_PASSWORD: flowforge
-          POSTGRES_DB:       flowforge
+          POSTGRES_USER:     flowsmith
+          POSTGRES_PASSWORD: flowsmith
+          POSTGRES_DB:       flowsmith
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U flowforge"
+          --health-cmd "pg_isready -U flowsmith"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
@@ -84,14 +84,14 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: flowforge
-          MYSQL_DATABASE:      flowforge
-          MYSQL_USER:          flowforge
-          MYSQL_PASSWORD:      flowforge
+          MYSQL_ROOT_PASSWORD: flowsmith
+          MYSQL_DATABASE:      flowsmith
+          MYSQL_USER:          flowsmith
+          MYSQL_PASSWORD:      flowsmith
         ports:
           - 3306:3306
         options: >-
-          --health-cmd "mysqladmin ping -h localhost -u flowforge -pflowforge"
+          --health-cmd "mysqladmin ping -h localhost -u flowsmith -pflowsmith"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 15
@@ -109,19 +109,19 @@ jobs:
         run: pip install -e ".[dev]"
 
       - name: Run Postgres migrations
-        run: flowforge migrate --url postgresql://flowforge:flowforge@localhost/flowforge
+        run: flowsmith migrate --url postgresql://flowsmith:flowsmith@localhost/flowsmith
 
       - name: Run MySQL migrations
-        run: flowforge migrate --url mysql://flowforge:flowforge@localhost/flowforge
+        run: flowsmith migrate --url mysql://flowsmith:flowsmith@localhost/flowsmith
 
       - name: Run integration tests (Postgres)
         env:
-          DATABASE_URL: postgresql://flowforge:flowforge@localhost/flowforge
+          DATABASE_URL: postgresql://flowsmith:flowsmith@localhost/flowsmith
         run: pytest tests/integration/test_postgres_storage.py -v --tb=short -m integration
 
       - name: Run integration tests (MySQL)
         env:
-          MYSQL_URL: mysql://flowforge:flowforge@localhost/flowforge
+          MYSQL_URL: mysql://flowsmith:flowsmith@localhost/flowsmith
         run: pytest tests/integration/test_mysql_storage.py -v --tb=short -m integration
 
   # ---------------------------------------------------------------------------
@@ -136,13 +136,13 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER:     flowforge
-          POSTGRES_PASSWORD: flowforge
-          POSTGRES_DB:       flowforge
+          POSTGRES_USER:     flowsmith
+          POSTGRES_PASSWORD: flowsmith
+          POSTGRES_DB:       flowsmith
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U flowforge"
+          --health-cmd "pg_isready -U flowsmith"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
@@ -150,14 +150,14 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: flowforge
-          MYSQL_DATABASE:      flowforge
-          MYSQL_USER:          flowforge
-          MYSQL_PASSWORD:      flowforge
+          MYSQL_ROOT_PASSWORD: flowsmith
+          MYSQL_DATABASE:      flowsmith
+          MYSQL_USER:          flowsmith
+          MYSQL_PASSWORD:      flowsmith
         ports:
           - 3306:3306
         options: >-
-          --health-cmd "mysqladmin ping -h localhost -u flowforge -pflowforge"
+          --health-cmd "mysqladmin ping -h localhost -u flowsmith -pflowsmith"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 15
@@ -175,13 +175,13 @@ jobs:
         run: pip install -e ".[dev]"
 
       - name: Run Postgres migrations
-        run: flowforge migrate --url postgresql://flowforge:flowforge@localhost/flowforge
+        run: flowsmith migrate --url postgresql://flowsmith:flowsmith@localhost/flowsmith
 
       - name: Run MySQL migrations
-        run: flowforge migrate --url mysql://flowforge:flowforge@localhost/flowforge
+        run: flowsmith migrate --url mysql://flowsmith:flowsmith@localhost/flowsmith
 
       - name: Run smoke tests
         env:
-          DATABASE_URL: postgresql://flowforge:flowforge@localhost/flowforge
-          MYSQL_URL: mysql://flowforge:flowforge@localhost/flowforge
+          DATABASE_URL: postgresql://flowsmith:flowsmith@localhost/flowsmith
+          MYSQL_URL: mysql://flowsmith:flowsmith@localhost/flowsmith
         run: python smoke_test.py

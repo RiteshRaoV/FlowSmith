@@ -20,19 +20,19 @@ test-integration:
 
 # Run everything
 test:
-	pytest tests/ -v --cov=flowforge --cov-report=term-missing
+	pytest tests/ -v --cov=flowsmith --cov-report=term-missing
 
 # ---------------------------------------------------------------------------
 # Code quality
 # ---------------------------------------------------------------------------
 lint:
-	ruff check flowforge/ tests/
+	ruff check flowsmith/ tests/
 
 fmt:
-	ruff format flowforge/ tests/
+	ruff format flowsmith/ tests/
 
 typecheck:
-	mypy flowforge/
+	mypy flowsmith/
 
 # ---------------------------------------------------------------------------
 # Database
@@ -40,13 +40,13 @@ typecheck:
 
 # Run migrations — reads DATABASE_URL from environment
 migrate:
-	flowforge migrate
+	flowsmith migrate
 
 migrate-postgres:
-	flowforge migrate --url postgresql://flowforge:flowforge@localhost/flowforge
+	flowsmith migrate --url postgresql://flowsmith:flowsmith@localhost/flowsmith
 
 migrate-mysql:
-	flowforge migrate --url mysql://flowforge:flowforge@localhost/flowforge
+	flowsmith migrate --url mysql://flowsmith:flowsmith@localhost/flowsmith
 
 # ---------------------------------------------------------------------------
 # Docker (local dev + integration tests)

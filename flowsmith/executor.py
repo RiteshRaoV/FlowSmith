@@ -7,13 +7,13 @@ import time
 from contextlib import suppress
 from typing import Any
 
-from flowforge.context import Context
-from flowforge.exceptions import StepFailed, StepTimeoutError
-from flowforge.models import FlowRecord
-from flowforge.step import ParallelGroup, Step
-from flowforge.storage.base import StorageBackend
+from flowsmith.context import Context
+from flowsmith.exceptions import StepFailed, StepTimeoutError
+from flowsmith.models import FlowRecord
+from flowsmith.step import ParallelGroup, Step
+from flowsmith.storage.base import StorageBackend
 
-logger = logging.getLogger("flowforge.executor")
+logger = logging.getLogger("flowsmith.executor")
 
 # Grace period given to a timed-out thread to clean up after receiving
 # StepTimeoutError before the hard kill fires.

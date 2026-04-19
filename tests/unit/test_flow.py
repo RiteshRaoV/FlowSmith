@@ -1,8 +1,8 @@
 import pytest
 
-from flowforge import Context, Flow
-from flowforge.exceptions import FlowAlreadyCompleted, FlowForgeNotConfigured, StepFailed
-from flowforge.storage import InMemoryStorage
+from flowsmith import Context, Flow
+from flowsmith.exceptions import FlowAlreadyCompleted, FlowSmithNotConfigured, StepFailed
+from flowsmith.storage import InMemoryStorage
 
 
 def make_flow(name="test_flow"):
@@ -11,12 +11,12 @@ def make_flow(name="test_flow"):
 
 def test_flow_raises_if_not_configured_and_no_override():
     """
-    Flow with no storage override should raise FlowForgeNotConfigured
+    Flow with no storage override should raise FlowSmithNotConfigured
     when run() is called without configure() having been called first.
     """
     flow = Flow("unconfigured_flow")
     flow.step("noop", lambda ctx: {})
-    with pytest.raises(FlowForgeNotConfigured):
+    with pytest.raises(FlowSmithNotConfigured):
         flow.run(Context({}), tracking_id="t1")
 
 

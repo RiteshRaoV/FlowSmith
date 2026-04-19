@@ -1,11 +1,11 @@
-class FlowForgeNotConfigured(Exception):
+class FlowSmithNotConfigured(Exception):
     """
-    Raised when a Flow is created before flowforge.configure() has been called.
+    Raised when a Flow is created before flowsmith.configure() has been called.
     """
     def __init__(self) -> None:
         super().__init__(
-            "FlowForge is not configured. "
-            "Call flowforge.configure(database_url=...) at server startup "
+            "FlowSmith is not configured. "
+            "Call flowsmith.configure(database_url=...) at server startup "
             "before creating any Flow instances."
         )
 

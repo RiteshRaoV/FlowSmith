@@ -1,18 +1,18 @@
 """
-FlowForge — lightweight durable workflow execution for Python backends.
+FlowSmith — lightweight durable workflow execution for Python backends.
 
 Quickstart:
-    import flowforge
+    import flowsmith
 
     # 1. Configure once at server startup
-    flowforge.configure(database_url=os.environ["DATABASE_URL"])
-    flowforge.start_watchdog(timeout_seconds=300, interval_seconds=60)
+    flowsmith.configure(database_url=os.environ["DATABASE_URL"])
+    flowsmith.start_watchdog(timeout_seconds=300, interval_seconds=60)
 
     # -------------------------------------------------------------------------
     # Flavor 1: The Classic Builder API
     # -------------------------------------------------------------------------
     # Ideal for explicit control and dynamically generating workflows.
-    from flowforge import Flow, Context
+    from flowsmith import Flow, Context
 
     flow = Flow("process_order")
     flow.step("charge",  charge_fn,  retries=3)
@@ -25,8 +25,8 @@ Quickstart:
     # Flavor 2: The Decorator API (v0.4+)
     # -------------------------------------------------------------------------
     # Ideal for readable, declarative workflows with built-in branching.
-    from flowforge import Context
-    from flowforge.decorators import workflow, step
+    from flowsmith import Context
+    from flowsmith.decorators import workflow, step
 
     @workflow("process_order")
     def order_flow():
@@ -44,16 +44,16 @@ Quickstart:
     order_flow(Context({"amount": 100}), tracking_id="order_123")
 """
 
-from flowforge.config import configure, reset, start_watchdog, stop_watchdog
-from flowforge.context import Context
-from flowforge.decorators import parallel, step, subflow, workflow
-from flowforge.exceptions import (
+from flowsmith.config import configure, reset, start_watchdog, stop_watchdog
+from flowsmith.context import Context
+from flowsmith.decorators import parallel, step, subflow, workflow
+from flowsmith.exceptions import (
     FlowAlreadyCompleted,
-    FlowForgeNotConfigured,
+    FlowSmithNotConfigured,
     StepFailed,
     StepTimeoutError,
 )
-from flowforge.flow import Flow
+from flowsmith.flow import Flow
 
 __all__ = [
     # Configuration
@@ -71,7 +71,7 @@ __all__ = [
     "parallel",
     "step",
     # Exceptions
-    "FlowForgeNotConfigured",
+    "FlowSmithNotConfigured",
     "StepFailed",
     "StepTimeoutError",
     "FlowAlreadyCompleted",

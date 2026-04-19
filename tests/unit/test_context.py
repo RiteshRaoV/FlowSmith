@@ -1,4 +1,4 @@
-from flowforge.context import Context
+from flowsmith.context import Context
 
 
 def test_initial_data_is_accessible():

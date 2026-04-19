@@ -1,9 +1,9 @@
 import time
 
-from flowforge.context import Context
-from flowforge.decorators import parallel, step, workflow
-from flowforge.flow import Flow
-from flowforge.storage.memory import InMemoryStorage
+from flowsmith.context import Context
+from flowsmith.decorators import parallel, step, workflow
+from flowsmith.flow import Flow
+from flowsmith.storage.memory import InMemoryStorage
 
 
 def test_parallel_decorator():
@@ -49,7 +49,7 @@ def test_parallel_decorator():
     # Execute
     ctx = Context()
     
-    from flowforge import config
+    from flowsmith import config
     config._storage = storage
 
     process(ctx, tracking_id="t1")

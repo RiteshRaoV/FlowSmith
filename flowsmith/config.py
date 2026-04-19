@@ -1,8 +1,8 @@
 import threading
 from typing import Any
 
-from flowforge.exceptions import FlowForgeNotConfigured
-from flowforge.storage.base import StorageBackend
+from flowsmith.exceptions import FlowSmithNotConfigured
+from flowsmith.storage.base import StorageBackend
 
 _lock = threading.Lock()
 _storage: StorageBackend | None = None
@@ -20,11 +20,11 @@ def _make_storage(
     All pool params are passed through to the backend.
     """
     if database_url.startswith("postgresql://") or database_url.startswith("postgres://"):
-        from flowforge.storage.postgres import PostgresStorage
+        from flowsmith.storage.postgres import PostgresStorage
         return PostgresStorage(url=database_url, pool_min=pool_min, pool_max=pool_max, pool_timeout=pool_timeout)
 
     if database_url.startswith("mysql://"):
-        from flowforge.storage.mysql import MySQLStorage
+        from flowsmith.storage.mysql import MySQLStorage
         return MySQLStorage(url=database_url, pool_min=pool_min, pool_max=pool_max, pool_timeout=pool_timeout)
 
     raise ValueError(
@@ -40,7 +40,7 @@ def configure(
     pool_timeout: int = 30,
 ) -> None:
     """
-    Initialise FlowForge with a database URL and connection pool settings.
+    Initialise FlowSmith with a database URL and connection pool settings.
     Call once at server startup.
 
     Args:
@@ -61,8 +61,8 @@ def configure(
             existing_url = getattr(_storage, "_url", None)
             if existing_url != database_url:
                 raise ValueError(
-                    "flowforge.configure() was already called with a different URL. "
-                    "Call flowforge.reset() first (test environments only)."
+                    "flowsmith.configure() was already called with a different URL. "
+                    "Call flowsmith.reset() first (test environments only)."
                 )
             return
 
@@ -76,7 +76,7 @@ def start_watchdog(
     """
     Start the background watchdog that detects stuck nodes.
 
-    Call this after flowforge.configure() at server startup.
+    Call this after flowsmith.configure() at server startup.
 
     Args:
         timeout_seconds: How long a node can stay in RUNNING before it is
@@ -85,19 +85,19 @@ def start_watchdog(
                           Default 60s (1 minute).
 
     Example:
-        import flowforge
-        flowforge.configure(database_url=os.environ["DATABASE_URL"])
-        flowforge.start_watchdog(timeout_seconds=300, interval_seconds=60)
+        import flowsmith
+        flowsmith.configure(database_url=os.environ["DATABASE_URL"])
+        flowsmith.start_watchdog(timeout_seconds=300, interval_seconds=60)
     """
     global _watchdog
 
-    storage = get_storage()   # raises FlowForgeNotConfigured if not configured
+    storage = get_storage()   # raises FlowSmithNotConfigured if not configured
 
     with _lock:
         if _watchdog and _watchdog.is_running:
             return  # already running, no-op
 
-        from flowforge.watchdog import Watchdog
+        from flowsmith.watchdog import Watchdog
         _watchdog = Watchdog(
             storage=storage,
             timeout_seconds=timeout_seconds,
@@ -120,10 +120,10 @@ def stop_watchdog() -> None:
 def get_storage() -> StorageBackend:
     """
     Return the globally configured storage backend.
-    Raises FlowForgeNotConfigured if configure() has not been called.
+    Raises FlowSmithNotConfigured if configure() has not been called.
     """
     if _storage is None:
-        raise FlowForgeNotConfigured()
+        raise FlowSmithNotConfigured()
     return _storage
 
 

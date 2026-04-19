@@ -1,7 +1,7 @@
 
-from flowforge.context import Context
-from flowforge.decorators import step, workflow
-from flowforge.storage.memory import InMemoryStorage
+from flowsmith.context import Context
+from flowsmith.decorators import step, workflow
+from flowsmith.storage.memory import InMemoryStorage
 
 
 def test_decorator_builder_and_conditional_branching():
@@ -9,8 +9,8 @@ def test_decorator_builder_and_conditional_branching():
     storage = InMemoryStorage()
     
     # Needs to be injected globally for decorators
-    import flowforge.config
-    flowforge.config._storage = storage
+    import flowsmith.config
+    flowsmith.config._storage = storage
 
     @workflow("my_branching_workflow")
     def process_test():
@@ -67,4 +67,4 @@ def test_decorator_builder_and_conditional_branching():
     assert false_node is None  # Never inserted!
     
     # Cleanup global storage
-    flowforge.config.reset()
+    flowsmith.config.reset()

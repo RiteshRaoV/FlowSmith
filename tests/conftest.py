@@ -1,19 +1,19 @@
 import pytest
 
-import flowforge
-from flowforge.storage import InMemoryStorage
+import flowsmith
+from flowsmith.storage import InMemoryStorage
 
 
 @pytest.fixture(autouse=True)
 def reset_global_config():
     """
-    Reset FlowForge global config before and after every test.
-    Prevents state leaking between tests that call flowforge.configure().
+    Reset FlowSmith global config before and after every test.
+    Prevents state leaking between tests that call flowsmith.configure().
     autouse=True means this runs automatically for every test.
     """
-    flowforge.reset()
+    flowsmith.reset()
     yield
-    flowforge.reset()
+    flowsmith.reset()
 
 
 @pytest.fixture

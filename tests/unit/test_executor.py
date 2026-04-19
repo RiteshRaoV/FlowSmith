@@ -1,10 +1,10 @@
 import pytest
 
-from flowforge.context import Context
-from flowforge.exceptions import StepFailed
-from flowforge.executor import Executor
-from flowforge.step import Step
-from flowforge.storage import InMemoryStorage
+from flowsmith.context import Context
+from flowsmith.exceptions import StepFailed
+from flowsmith.executor import Executor
+from flowsmith.step import Step
+from flowsmith.storage import InMemoryStorage
 
 
 def make_executor():

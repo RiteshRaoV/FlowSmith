@@ -2,11 +2,11 @@ import contextlib
 from collections.abc import Callable
 from typing import Any
 
-from flowforge.context import Context
-from flowforge.exceptions import FlowAlreadyCompleted
-from flowforge.executor import Executor
-from flowforge.step import ParallelGroup, Step
-from flowforge.storage.base import StorageBackend
+from flowsmith.context import Context
+from flowsmith.exceptions import FlowAlreadyCompleted
+from flowsmith.executor import Executor
+from flowsmith.step import ParallelGroup, Step
+from flowsmith.storage.base import StorageBackend
 
 
 class Flow:
@@ -168,5 +168,5 @@ class Flow:
     def _get_storage(self) -> StorageBackend:
         if self._storage_override is not None:
             return self._storage_override
-        from flowforge.config import get_storage
+        from flowsmith.config import get_storage
         return get_storage()

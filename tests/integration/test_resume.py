@@ -4,7 +4,7 @@ Integration tests for crash recovery and resume using real PostgreSQL.
 Requirements:
     - Docker running: make db-up
     - Migrations applied: make migrate
-    - DATABASE_URL set: export DATABASE_URL=postgresql://flowforge:flowforge@localhost/flowforge
+    - DATABASE_URL set: export DATABASE_URL=postgresql://flowsmith:flowsmith@localhost/flowsmith
 
 Run with:
     make test-integration

@@ -1,10 +1,10 @@
 """
-FlowForge CLI
+FlowSmith CLI
 Usage:
-    flowforge migrate --url postgresql://user:pass@localhost/db
-    flowforge migrate --url mysql://user:pass@localhost/db
-    flowforge migrate  # reads DATABASE_URL from environment
-    flowforge migrate  # reads DATABASE_URL from environment
+    flowsmith migrate --url postgresql://user:pass@localhost/db
+    flowsmith migrate --url mysql://user:pass@localhost/db
+    flowsmith migrate  # reads DATABASE_URL from environment
+    flowsmith migrate  # reads DATABASE_URL from environment
 """
 
 import argparse
@@ -36,7 +36,7 @@ def run_migrations_postgres(url: str) -> None:
         import psycopg2
     except ImportError:
         print("ERROR: psycopg2 is required for PostgreSQL.")
-        print("Install it with:  pip install flowforge[postgres]")
+        print("Install it with:  pip install flowsmith[postgres]")
         sys.exit(1)
 
     migration_dir = MIGRATIONS_DIR / "postgres"
@@ -97,7 +97,7 @@ def run_migrations_mysql(url: str) -> None:
         import mysql.connector
     except ImportError:
         print("ERROR: mysql-connector-python is required for MySQL.")
-        print("Install it with:  pip install flowforge[mysql]")
+        print("Install it with:  pip install flowsmith[mysql]")
         sys.exit(1)
 
     from urllib.parse import urlparse
@@ -135,8 +135,8 @@ def cmd_migrate(args: argparse.Namespace) -> None:
             "ERROR: No database URL provided.\n"
             "Pass --url or set the DATABASE_URL environment variable.\n\n"
             "Examples:\n"
-            "  flowforge migrate --url postgresql://user:pass@localhost/mydb\n"
-            "  flowforge migrate --url mysql://user:pass@localhost/mydb\n"
+            "  flowsmith migrate --url postgresql://user:pass@localhost/mydb\n"
+            "  flowsmith migrate --url mysql://user:pass@localhost/mydb\n"
         )
         sys.exit(1)
 
@@ -146,7 +146,7 @@ def cmd_migrate(args: argparse.Namespace) -> None:
         print(f"ERROR: {e}")
         sys.exit(1)
 
-    print(f"Running FlowForge migrations ({dialect})...")
+    print(f"Running FlowSmith migrations ({dialect})...")
 
     try:
         if dialect == "postgres":
@@ -157,13 +157,13 @@ def cmd_migrate(args: argparse.Namespace) -> None:
         print(f"\nERROR: Migration failed: {e}")
         sys.exit(1)
 
-    print("Done. Tables ff_flows and ff_nodes are ready.")
+    print("Done. Tables fs_flows and fs_nodes are ready.")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        prog="flowforge",
-        description="FlowForge CLI",
+        prog="flowsmith",
+        description="FlowSmith CLI",
     )
     subparsers = parser.add_subparsers(dest="command")
 

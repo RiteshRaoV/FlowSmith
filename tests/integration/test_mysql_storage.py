@@ -16,14 +16,14 @@ from sqlalchemy import text
 
 pytestmark = pytest.mark.integration
 
-MYSQL_URL = "mysql://flowforge:flowforge@localhost/flowforge"
+MYSQL_URL = "mysql://flowsmith:flowsmith@localhost/flowsmith"
 
 
 @pytest.fixture(scope="module")
 def mysql_storage():
     url = os.environ.get("MYSQL_URL", MYSQL_URL)
     try:
-        from flowforge.storage.mysql import MySQLStorage
+        from flowsmith.storage.mysql import MySQLStorage
         storage = MySQLStorage(url=url)
         yield storage
         storage._engine.dispose()
@@ -36,8 +36,8 @@ def cleanup(mysql_storage):
     """Remove test rows after each test."""
     yield
     with mysql_storage._conn() as conn:
-        conn.execute(text("DELETE FROM ff_nodes WHERE flow_id LIKE 'test-%'"))
-        conn.execute(text("DELETE FROM ff_flows WHERE id LIKE 'test-%'"))
+        conn.execute(text("DELETE FROM fs_nodes WHERE flow_id LIKE 'test-%'"))
+        conn.execute(text("DELETE FROM fs_flows WHERE id LIKE 'test-%'"))
         conn.commit()
 
 

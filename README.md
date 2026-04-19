@@ -1,8 +1,8 @@
-# FlowForge
+# FlowSmith
 
 Lightweight durable workflow execution for Python backends.
 
-FlowForge fills the gap between fragile custom scripts and heavyweight orchestration systems like Temporal or Airflow. Define backend workflows as code, execute them reliably, and resume them safely after crashes — with zero external infrastructure beyond your existing database.
+FlowSmith fills the gap between fragile custom scripts and heavyweight orchestration systems like Temporal or Airflow. Define backend workflows as code, execute them reliably, and resume them safely after crashes — with zero external infrastructure beyond your existing database.
 
 ---
 
@@ -23,7 +23,7 @@ Writing this is easy. Making it production-safe is not. What happens when:
 - `call_payments_api` times out on attempt 1 but would succeed on attempt 2?
 - You need to know exactly which step failed and why?
 
-Without FlowForge you write custom retry logic, track state manually, and hope nothing crashes mid-flow. With FlowForge, every step is persisted, every failure is recoverable, and every execution is observable.
+Without FlowSmith you write custom retry logic, track state manually, and hope nothing crashes mid-flow. With FlowSmith, every step is persisted, every failure is recoverable, and every execution is observable.
 
 ---
 
@@ -31,13 +31,13 @@ Without FlowForge you write custom retry logic, track state manually, and hope n
 
 ```bash
 # PostgreSQL
-pip install flowforge[postgres]
+pip install flowsmith[postgres]
 
 # MySQL
-pip install flowforge[mysql]
+pip install flowsmith[mysql]
 
 # Both
-pip install flowforge[postgres,mysql]
+pip install flowsmith[postgres,mysql]
 ```
 
 ---
@@ -47,9 +47,9 @@ pip install flowforge[postgres,mysql]
 **1. Configure once at server startup**
 
 ```python
-import flowforge
+import flowsmith
 
-flowforge.configure(
+flowsmith.configure(
     database_url=os.environ["DATABASE_URL"],
     pool_min=2,      # always 2 connections alive
     pool_max=10,     # scales to 10 under load
@@ -57,10 +57,10 @@ flowforge.configure(
 )
 
 # Optional but recommended — detects crashed nodes automatically
-flowforge.start_watchdog(timeout_seconds=300, interval_seconds=60)
+flowsmith.start_watchdog(timeout_seconds=300, interval_seconds=60)
 ```
 
-Supports both PostgreSQL and MySQL — FlowForge detects the right backend from the URL:
+Supports both PostgreSQL and MySQL — FlowSmith detects the right backend from the URL:
 
 ```bash
 DATABASE_URL=postgresql://user:password@host:5432/mydb
@@ -70,12 +70,12 @@ DATABASE_URL=mysql://user:password@host:3306/mydb
 **2. Run migrations**
 
 ```bash
-flowforge migrate
+flowsmith migrate
 # or explicitly
-flowforge migrate --url postgresql://user:pass@localhost/mydb
+flowsmith migrate --url postgresql://user:pass@localhost/mydb
 ```
 
-This creates two tables in your database: `ff_flows` and `ff_nodes`.
+This creates two tables in your database: `fs_flows` and `fs_nodes`.
 
 **3. Define step functions**
 
@@ -120,7 +120,7 @@ Each step receives a `Context` object (`ctx`). The output of every completed ste
 **4. Wire up the flow and run it**
 
 ```python
-from flowforge import Flow, Context
+from flowsmith import Flow, Context
 
 flow = Flow("create_order")
 flow.step("get_product",         get_product,         retries=3)
@@ -138,10 +138,10 @@ flow.run(
 
 ## The Decorator API (v0.4+)
 
-FlowForge supports a powerful Context-Aware Builder Pattern using decorators. This allows you to define workflows naturally and introduces built-in conditional branching.
+FlowSmith supports a powerful Context-Aware Builder Pattern using decorators. This allows you to define workflows naturally and introduces built-in conditional branching.
 
 ```python
-from flowforge.decorators import workflow, step
+from flowsmith.decorators import workflow, step
 
 @workflow("checkout_process")
 def process_order():
@@ -166,10 +166,10 @@ The decorator natively handles retries, pausing on crashes, and skipped steps, e
 
 ## Parallel Execution & Subflows (v0.5+)
 
-FlowForge supports executing multiple independent steps concurrently utilizing a `ThreadPoolExecutor`, and formally supports isolated sub-workflows.
+FlowSmith supports executing multiple independent steps concurrently utilizing a `ThreadPoolExecutor`, and formally supports isolated sub-workflows.
 
 ```python
-from flowforge.decorators import workflow, step, parallel, subflow
+from flowsmith.decorators import workflow, step, parallel, subflow
 
 @workflow("analytics_pipeline")
 def process_data():
@@ -230,7 +230,7 @@ def process_data():
 | Full execution trace         | Every step's input, output, error, and attempt count is stored             |
 | Idempotent trigger           | Calling `flow.run()` with the same `tracking_id` resumes, never duplicates |
 
-> **Note on at-least-once:** FlowForge guarantees completed steps are never re-run. Steps that were _in progress_ when a crash happened will be retried. Make your step functions idempotent (safe to run more than once) for full crash safety.
+> **Note on at-least-once:** FlowSmith guarantees completed steps are never re-run. Steps that were _in progress_ when a crash happened will be retried. Make your step functions idempotent (safe to run more than once) for full crash safety.
 
 ---
 
@@ -238,7 +238,7 @@ def process_data():
 
 The watchdog solves a subtle but critical problem: what happens when a process crashes _after_ a node is marked `RUNNING` but _before_ it is marked `COMPLETED`?
 
-Without intervention, that node stays `RUNNING` in the database forever — the flow can never be resumed because FlowForge sees it as still in progress.
+Without intervention, that node stays `RUNNING` in the database forever — the flow can never be resumed because FlowSmith sees it as still in progress.
 
 The watchdog is a background thread that periodically scans for nodes that have been `RUNNING` longer than your configured timeout. When it finds one, it marks the node `FAILED` and the parent flow `FAILED`, so the next `flow.run()` call can resume correctly.
 
@@ -249,15 +249,15 @@ The watchdog is a background thread that periodically scans for nodes that have 
 10:05:00  Watchdog wakes   → finds node RUNNING for > 5 min
 10:05:00  Watchdog marks   → node = FAILED, flow = FAILED
 10:05:30  Server restarts  → flow.run(tracking_id="same-id")
-10:05:30  FlowForge sees   → step 1 COMPLETED (skip)
-10:05:30  FlowForge sees   → step 2 FAILED (retry from here) ✓
+10:05:30  FlowSmith sees   → step 1 COMPLETED (skip)
+10:05:30  FlowSmith sees   → step 2 FAILED (retry from here) ✓
 ```
 
 **Start it at server startup:**
 
 ```python
-flowforge.configure(database_url=os.environ["DATABASE_URL"])
-flowforge.start_watchdog(
+flowsmith.configure(database_url=os.environ["DATABASE_URL"])
+flowsmith.start_watchdog(
     timeout_seconds=300,   # how long before a RUNNING node is considered stuck
     interval_seconds=60,   # how often to scan
 )
@@ -271,7 +271,7 @@ The watchdog runs as a daemon thread — it stops automatically when your proces
 
 ## Resume behaviour
 
-FlowForge uses `tracking_id` to identify a flow execution. Pass the same `tracking_id` to resume:
+FlowSmith uses `tracking_id` to identify a flow execution. Pass the same `tracking_id` to resume:
 
 ```python
 # First run — crashes on step 3
@@ -291,7 +291,7 @@ flow.run(ctx, tracking_id="order_abc123")
 
 ## Database backends
 
-FlowForge supports PostgreSQL and MySQL via the same `StorageBackend` interface. The backend is selected automatically from your database URL.
+FlowSmith supports PostgreSQL and MySQL via the same `StorageBackend` interface. The backend is selected automatically from your database URL.
 
 | URL prefix                       | Backend           |
 | -------------------------------- | ----------------- |
@@ -301,7 +301,7 @@ FlowForge supports PostgreSQL and MySQL via the same `StorageBackend` interface.
 For testing, use `InMemoryStorage` — no database required:
 
 ```python
-from flowforge.storage import InMemoryStorage
+from flowsmith.storage import InMemoryStorage
 
 flow = Flow("test_flow", storage=InMemoryStorage())
 flow.step("my_step", my_fn)
@@ -351,8 +351,8 @@ make db-down
 ## Project structure
 
 ```
-flowforge/
-├── flowforge/
+flowsmith/
+├── flowsmith/
 │   ├── __init__.py        # public API: configure(), start_watchdog(), Flow, Context
 │   ├── config.py          # global configure(), start_watchdog(), get_storage()
 │   ├── flow.py            # Flow class — step registration and run()
@@ -360,7 +360,7 @@ flowforge/
 │   ├── watchdog.py        # background thread for stuck-node detection
 │   ├── context.py         # Context — shared state between steps
 │   ├── step.py            # Step dataclass
-│   ├── exceptions.py      # FlowForgeNotConfigured, StepFailed, FlowAlreadyCompleted
+│   ├── exceptions.py      # FlowSmithNotConfigured, StepFailed, FlowAlreadyCompleted
 │   ├── storage/
 │   │   ├── base.py        # StorageBackend ABC — implement this to add a new backend
 │   │   ├── postgres.py    # PostgreSQL backend

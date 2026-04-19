@@ -2,15 +2,15 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER:     flowforge
-      POSTGRES_PASSWORD: flowforge
-      POSTGRES_DB:       flowforge
+      POSTGRES_USER:     flowsmith
+      POSTGRES_PASSWORD: flowsmith
+      POSTGRES_DB:       flowsmith
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U flowforge"]
+      test: ["CMD-SHELL", "pg_isready -U flowsmith"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -18,16 +18,16 @@ services:
   mysql:
     image: mysql:8.0
     environment:
-      MYSQL_ROOT_PASSWORD: flowforge
-      MYSQL_DATABASE:      flowforge
-      MYSQL_USER:          flowforge
-      MYSQL_PASSWORD:      flowforge
+      MYSQL_ROOT_PASSWORD: flowsmith
+      MYSQL_DATABASE:      flowsmith
+      MYSQL_USER:          flowsmith
+      MYSQL_PASSWORD:      flowsmith
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "flowforge", "-pflowforge"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "flowsmith", "-pflowsmith"]
       interval: 5s
       timeout: 3s
       retries: 10

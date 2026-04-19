@@ -3,7 +3,7 @@ import functools
 from collections.abc import Callable
 from typing import Any
 
-from flowforge.flow import Flow
+from flowsmith.flow import Flow
 
 _current_flow: contextvars.ContextVar[Flow | None] = contextvars.ContextVar("_current_flow", default=None)
 
@@ -121,7 +121,7 @@ def subflow(
                 child_runner = result["flow"]
                 tid = result["tracking_id"]
                 
-                from flowforge.flow import Flow
+                from flowsmith.flow import Flow
                 if isinstance(child_runner, Flow):
                     child_runner.run(ctx, tracking_id=tid)
                 else:

@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "flowforge"
+name = "flowsmith"
 version = "0.6.0"
 description = "Lightweight durable workflow execution for Python backends"
 readme = "README.md"
@@ -42,11 +42,11 @@ dev = [
 ]
 
 [project.scripts]
-flowforge = "flowforge.__main__:main"
+flowsmith = "flowsmith.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["flowforge*"]
+include = ["flowsmith*"]
 
 # ---------------------------------------------------------------------------
 # pytest

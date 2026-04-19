@@ -1,6 +1,6 @@
-CREATE TABLE IF NOT EXISTS ff_nodes (
+CREATE TABLE IF NOT EXISTS  (
     id            TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    flow_id       TEXT        NOT NULL REFERENCES ff_flows(id) ON DELETE CASCADE,
+    flow_id       TEXT        NOT NULL REFERENCES fs_flows(id) ON DELETE CASCADE,
     step_name     TEXT        NOT NULL,
     status        TEXT        NOT NULL DEFAULT 'RUNNING',  -- RUNNING | FAILED | COMPLETED
     input_data    JSONB,
@@ -11,8 +11,8 @@ CREATE TABLE IF NOT EXISTS ff_nodes (
     ended_at      TIMESTAMPTZ,
 
     -- Ensures only one node record per (flow, step) pair
-    CONSTRAINT uq_ff_nodes_flow_step UNIQUE (flow_id, step_name)
+    CONSTRAINT uq_fs_nodes_flow_step UNIQUE (flow_id, step_name)
 );
 
-CREATE INDEX IF NOT EXISTS idx_ff_nodes_flow_id    ON ff_nodes (flow_id);
-CREATE INDEX IF NOT EXISTS idx_ff_nodes_status     ON ff_nodes (status);
+CREATE INDEX IF NOT EXISTS idx_fs_nodes_flow_id    ON fs_nodes (flow_id);
+CREATE INDEX IF NOT EXISTS idx_fs_nodes_status     ON fs_nodes (status);

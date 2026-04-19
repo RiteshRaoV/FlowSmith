@@ -3,8 +3,8 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from flowforge.models import FlowRecord, NodeRecord
-from flowforge.storage.base import StorageBackend
+from flowsmith.models import FlowRecord, NodeRecord
+from flowsmith.storage.base import StorageBackend
 
 
 def _now() -> datetime:
@@ -38,7 +38,7 @@ class MySQLStorage(StorageBackend):
     """
     MySQL 8.0+ storage backend using SQLAlchemy connection pooling.
 
-    Requires: pip install flowforge[mysql]
+    Requires: pip install flowsmith[mysql]
 
     Uses SQLAlchemy's QueuePool — same pool implementation as PostgresStorage,
     giving both backends identical pooling behaviour and configuration.
@@ -61,7 +61,7 @@ class MySQLStorage(StorageBackend):
         except ImportError as err:
             raise ImportError(
                 "sqlalchemy and mysql-connector-python are required for MySQLStorage.\n"
-                "Install with:  pip install flowforge[mysql]"
+                "Install with:  pip install flowsmith[mysql]"
             ) from err
 
         return create_engine(
@@ -83,7 +83,7 @@ class MySQLStorage(StorageBackend):
         from sqlalchemy import text
         with self._conn() as conn:
             row = conn.execute(
-                text("SELECT * FROM ff_flows WHERE id = :id"),
+                text("SELECT * FROM fs_flows WHERE id = :id"),
                 {"id": tracking_id}
             ).mappings().fetchone()
         return None if row is None else self._row_to_flow(row)
@@ -93,7 +93,7 @@ class MySQLStorage(StorageBackend):
         now = _now()
         with self._conn() as conn:
             conn.execute(text(
-                "INSERT INTO ff_flows (id, name, status, input_data, created_at, updated_at) "
+                "INSERT INTO fs_flows (id, name, status, input_data, created_at, updated_at) "
                 "VALUES (:id, :name, 'RUNNING', :input_data, :created_at, :updated_at)"
             ), {"id": tracking_id, "name": name, "input_data": _to_json(input_data),
                 "created_at": now, "updated_at": now})
@@ -105,7 +105,7 @@ class MySQLStorage(StorageBackend):
         from sqlalchemy import text
         with self._conn() as conn:
             conn.execute(text(
-                "UPDATE ff_flows SET status='COMPLETED', output_data=:output_data, "
+                "UPDATE fs_flows SET status='COMPLETED', output_data=:output_data, "
                 "updated_at=:updated_at WHERE id=:id"
             ), {"output_data": _to_json(output_data), "updated_at": _now(), "id": flow_id})
             conn.commit()
@@ -114,7 +114,7 @@ class MySQLStorage(StorageBackend):
         from sqlalchemy import text
         with self._conn() as conn:
             conn.execute(text(
-                "UPDATE ff_flows SET status='FAILED', error=:error, "
+                "UPDATE fs_flows SET status='FAILED', error=:error, "
                 "updated_at=:updated_at WHERE id=:id"
             ), {"error": error, "updated_at": _now(), "id": flow_id})
             conn.commit()
@@ -127,7 +127,7 @@ class MySQLStorage(StorageBackend):
         from sqlalchemy import text
         with self._conn() as conn:
             row = conn.execute(text(
-                "SELECT * FROM ff_nodes WHERE flow_id=:flow_id AND step_name=:step_name"
+                "SELECT * FROM fs_nodes WHERE flow_id=:flow_id AND step_name=:step_name"
             ), {"flow_id": flow_id, "step_name": step_name}).mappings().fetchone()
         return None if row is None else self._row_to_node(row)
 
@@ -137,7 +137,7 @@ class MySQLStorage(StorageBackend):
         node_id = str(uuid.uuid4())
         with self._conn() as conn:
             conn.execute(text("""
-                INSERT INTO ff_nodes (id, flow_id, step_name, status, input_data, attempt_count, started_at)
+                INSERT INTO fs_nodes (id, flow_id, step_name, status, input_data, attempt_count, started_at)
                 VALUES (:id, :flow_id, :step_name, 'RUNNING', :input_data, 1, :started_at)
                 ON DUPLICATE KEY UPDATE
                     status='RUNNING', input_data=VALUES(input_data),
@@ -146,7 +146,7 @@ class MySQLStorage(StorageBackend):
             """), {"id": node_id, "flow_id": flow_id, "step_name": step_name,
                    "input_data": _to_json(input_data), "started_at": now})
             row = conn.execute(text(
-                "SELECT * FROM ff_nodes WHERE flow_id=:flow_id AND step_name=:step_name"
+                "SELECT * FROM fs_nodes WHERE flow_id=:flow_id AND step_name=:step_name"
             ), {"flow_id": flow_id, "step_name": step_name}).mappings().fetchone()
             conn.commit()
         return self._row_to_node(row)
@@ -155,7 +155,7 @@ class MySQLStorage(StorageBackend):
         from sqlalchemy import text
         with self._conn() as conn:
             conn.execute(text(
-                "UPDATE ff_nodes SET status='COMPLETED', output_data=:output_data, ended_at=:ended_at "
+                "UPDATE fs_nodes SET status='COMPLETED', output_data=:output_data, ended_at=:ended_at "
                 "WHERE flow_id=:flow_id AND step_name=:step_name"
             ), {"output_data": _to_json(output_data), "ended_at": _now(),
                 "flow_id": flow_id, "step_name": step_name})
@@ -165,7 +165,7 @@ class MySQLStorage(StorageBackend):
         from sqlalchemy import text
         with self._conn() as conn:
             conn.execute(text(
-                "UPDATE ff_nodes SET status='FAILED', error=:error, "
+                "UPDATE fs_nodes SET status='FAILED', error=:error, "
                 "attempt_count=:attempt, ended_at=:ended_at "
                 "WHERE flow_id=:flow_id AND step_name=:step_name"
             ), {"error": error, "attempt": attempt, "ended_at": _now(),
@@ -176,7 +176,7 @@ class MySQLStorage(StorageBackend):
         from sqlalchemy import text
         with self._conn() as conn:
             rows = conn.execute(text(
-                "SELECT * FROM ff_nodes WHERE status='RUNNING' "
+                "SELECT * FROM fs_nodes WHERE status='RUNNING' "
                 "AND started_at < DATE_SUB(NOW(), INTERVAL :timeout SECOND)"
             ), {"timeout": timeout_seconds}).mappings().fetchall()
         return [self._row_to_node(row) for row in rows]

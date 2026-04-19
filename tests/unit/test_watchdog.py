@@ -7,8 +7,8 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from flowforge.storage import InMemoryStorage
-from flowforge.watchdog import Watchdog
+from flowsmith.storage import InMemoryStorage
+from flowsmith.watchdog import Watchdog
 
 
 def make_storage():
@@ -147,25 +147,25 @@ def test_start_watchdog_is_idempotent():
 
 
 def test_start_watchdog_raises_if_not_configured():
-    import flowforge
-    flowforge.reset()
-    from flowforge.exceptions import FlowForgeNotConfigured
-    with pytest.raises(FlowForgeNotConfigured):
-        flowforge.start_watchdog()
+    import flowsmith
+    flowsmith.reset()
+    from flowsmith.exceptions import FlowSmithNotConfigured
+    with pytest.raises(FlowSmithNotConfigured):
+        flowsmith.start_watchdog()
 
 
 def test_start_watchdog_via_public_api():
-    import flowforge
-    flowforge.reset()
-    flowforge.configure(database_url="postgresql://u:p@localhost/db")
+    import flowsmith
+    flowsmith.reset()
+    flowsmith.configure(database_url="postgresql://u:p@localhost/db")
 
     # configure() doesn't connect — so get_storage() works but Watchdog
     # won't actually query DB. We just verify the thread starts.
     try:
-        flowforge.start_watchdog(timeout_seconds=300, interval_seconds=60)
-        from flowforge.config import _watchdog
+        flowsmith.start_watchdog(timeout_seconds=300, interval_seconds=60)
+        from flowsmith.config import _watchdog
         assert _watchdog is not None
         assert _watchdog.is_running
     finally:
-        flowforge.stop_watchdog()
-        flowforge.reset()
+        flowsmith.stop_watchdog()
+        flowsmith.reset()

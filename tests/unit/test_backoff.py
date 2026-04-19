@@ -6,11 +6,11 @@ import time
 
 import pytest
 
-from flowforge.context import Context
-from flowforge.exceptions import StepFailed, StepTimeoutError
-from flowforge.executor import Executor, _calc_backoff
-from flowforge.step import Step
-from flowforge.storage import InMemoryStorage
+from flowsmith.context import Context
+from flowsmith.exceptions import StepFailed, StepTimeoutError
+from flowsmith.executor import Executor, _calc_backoff
+from flowsmith.step import Step
+from flowsmith.storage import InMemoryStorage
 
 
 def make_executor():

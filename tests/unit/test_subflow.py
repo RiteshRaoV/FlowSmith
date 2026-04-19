@@ -1,12 +1,12 @@
-from flowforge.context import Context
-from flowforge.decorators import step, subflow, workflow
-from flowforge.flow import Flow
-from flowforge.storage.memory import InMemoryStorage
+from flowsmith.context import Context
+from flowsmith.decorators import step, subflow, workflow
+from flowsmith.flow import Flow
+from flowsmith.storage.memory import InMemoryStorage
 
 
 def test_subflow_decorator():
     """Verify that @subflow natively executes another decorated workflow."""
-    from flowforge import config
+    from flowsmith import config
     config._storage = InMemoryStorage()
 
     logs = []
@@ -45,7 +45,7 @@ def test_subflow_decorator():
 
 def test_subflow_builder_api():
     """Verify native subflow handling in classic builder API."""
-    from flowforge import config
+    from flowsmith import config
     config._storage = InMemoryStorage()
 
     child = Flow("child_api")

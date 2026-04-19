@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS ff_flows (
+CREATE TABLE IF NOT EXISTS fs_flows (
     id           TEXT        PRIMARY KEY,          -- caller-supplied tracking_id
     name         TEXT        NOT NULL,             -- workflow name
     status       TEXT        NOT NULL DEFAULT 'RUNNING',  -- RUNNING | FAILED | COMPLETED
@@ -9,5 +9,5 @@ CREATE TABLE IF NOT EXISTS ff_flows (
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_ff_flows_status ON ff_flows (status);
-CREATE INDEX IF NOT EXISTS idx_ff_flows_name   ON ff_flows (name);
+CREATE INDEX IF NOT EXISTS idx_fs_flows_status ON fs_flows (status);
+CREATE INDEX IF NOT EXISTS idx_fs_flows_name   ON fs_flows (name);

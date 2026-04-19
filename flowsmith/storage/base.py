@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-from flowforge.models import FlowRecord, NodeRecord
+from flowsmith.models import FlowRecord, NodeRecord
 
 
 class StorageBackend(ABC):
     """
-    Abstract interface for all FlowForge storage backends.
+    Abstract interface for all FlowSmith storage backends.
     Implement this to add a new backend (Redis, MongoDB, SQLite, etc.).
     """
 
