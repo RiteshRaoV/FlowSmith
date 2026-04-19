@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS  (
+CREATE TABLE IF NOT EXISTS fs_nodes (
     id            TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
     flow_id       TEXT        NOT NULL REFERENCES fs_flows(id) ON DELETE CASCADE,
     step_name     TEXT        NOT NULL,
