@@ -48,6 +48,9 @@ flowsmith = "flowsmith.__main__:main"
 where = ["."]
 include = ["flowsmith*"]
 
+[tool.setuptools.package-data]
+flowsmith = ["migrations/**/*.sql"]
+
 # ---------------------------------------------------------------------------
 # pytest
 # ---------------------------------------------------------------------------
