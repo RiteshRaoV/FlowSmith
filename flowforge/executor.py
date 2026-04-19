@@ -5,6 +5,7 @@ import random
 import threading
 import time
 from contextlib import suppress
+from typing import Any
 
 from flowforge.context import Context
 from flowforge.exceptions import StepFailed, StepTimeoutError
@@ -48,11 +49,11 @@ def _calc_backoff(step: Step, attempt: int) -> float:
     exp_delay = min(exp_delay, 60.0)   # cap at 60s
 
     if step.backoff == "exponential":
-        return exp_delay
+        return float(exp_delay)
 
     # jitter: exponential + random noise up to the exponential value
     # keeps retries spread out even when many processes crash simultaneously
-    return exp_delay + random.uniform(0, exp_delay)
+    return float(exp_delay + random.uniform(0, exp_delay))
 
 
 def _raise_in_thread(thread: threading.Thread, exc_type: type) -> None:
@@ -64,6 +65,9 @@ def _raise_in_thread(thread: threading.Thread, exc_type: type) -> None:
     NOT interrupt a thread blocked in a C extension or I/O syscall.
     If the thread is stuck in C code, the hard kill grace period fires instead.
     """
+    if thread.ident is None:
+        raise ValueError("Thread is not started")
+        
     result = ctypes.pythonapi.PyThreadState_SetAsyncExc(
         _THREAD_ID_TYPE(thread.ident),
         ctypes.py_object(exc_type),
@@ -97,7 +101,7 @@ class _StepRunner:
         self._exception: Exception | None = None
         self._thread: threading.Thread | None = None
 
-    def run(self) -> dict:
+    def run(self) -> dict[str, Any]:
         """
         Execute the step. Returns the step's output dict.
         Raises StepTimeoutError or any exception thrown by the step function.
@@ -106,12 +110,12 @@ class _StepRunner:
             return self._run_direct()
         return self._run_with_timeout()
 
-    def _run_direct(self) -> dict:
+    def _run_direct(self) -> dict[str, Any]:
         """Run step in the calling thread — no timeout, no overhead."""
         result = self._step.fn(self._ctx)
         return result if isinstance(result, dict) else {}
 
-    def _run_with_timeout(self) -> dict:
+    def _run_with_timeout(self) -> dict[str, Any]:
         """Run step in a worker thread, enforce timeout."""
         self._thread = threading.Thread(
             target=self._worker,
@@ -145,7 +149,7 @@ class _StepRunner:
 
         raise StepTimeoutError(
             step_name=self._step.name,
-            timeout=self._step.timeout,
+            timeout=self._step.timeout or 0,
             attempt=1,   # caller will set the real attempt number
         )
 
@@ -282,6 +286,6 @@ class Executor:
         raise StepFailed(
             step_name=step.name,
             attempt=step.retries,
-            original=last_exception,
+            original=last_exception or Exception("Unknown error"),
         )
 

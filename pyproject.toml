@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "flowforge"
-version = "0.5.0"
+version = "0.6.0"
 description = "Lightweight durable workflow execution for Python backends"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -56,6 +56,9 @@ testpaths = ["tests"]
 addopts   = "-v --tb=short"
 markers   = [
     "integration: requires a running Postgres instance (via docker-compose)",
+]
+filterwarnings = [
+    "ignore::pytest.PytestUnhandledThreadExceptionWarning",
 ]
 
 # ---------------------------------------------------------------------------

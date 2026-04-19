@@ -1,5 +1,6 @@
 import contextlib
 from collections.abc import Callable
+from typing import Any
 
 from flowforge.context import Context
 from flowforge.exceptions import FlowAlreadyCompleted
@@ -24,14 +25,14 @@ class Flow:
         ...
     """
 
-    def __init__(self, name: str, storage: StorageBackend | None = None):
+    def __init__(self, name: str, storage: StorageBackend | None = None) -> None:
         self.name = name
         self._steps: list[Step | ParallelGroup] = []
         self._storage_override = storage
         self._active_parallel_group: ParallelGroup | None = None
 
     @contextlib.contextmanager
-    def parallel(self):
+    def parallel(self) -> Any:
         """
         Context manager to bundle subsequent step() calls into a ParallelGroup.
         When executed, all steps in this group run concurrently.
@@ -44,16 +45,15 @@ class Flow:
             self._active_parallel_group = None
             if group.steps:
                 self._steps.append(group)
-
     def step(
         self,
         name: str,
-        fn: Callable,
+        fn: Callable[..., Any],
         retries: int = 1,
         backoff: str = "fixed",
         backoff_base: float = 0.0,
         timeout: int | None = None,
-        condition: Callable | None = None,
+        condition: Callable[..., Any] | None = None,
     ) -> "Flow":
         """
         Register a step on this flow.
@@ -100,7 +100,7 @@ class Flow:
         backoff: str = "fixed",
         backoff_base: float = 0.0,
         timeout: int | None = None,
-        condition: Callable | None = None,
+        condition: Callable[..., Any] | None = None,
     ) -> "Flow":
         """
         Formally register an embedded sub-flow as a step execution.
@@ -110,7 +110,7 @@ class Flow:
             tracking_id:  Either a static string or a callable (ctx) -> str
                           for dynamic tracking IDs based on runtime context.
         """
-        def _subflow_runner(ctx: Context) -> dict:
+        def _subflow_runner(ctx: Context) -> dict[str, Any]:
             tid = tracking_id(ctx) if callable(tracking_id) else tracking_id
             flow.run(ctx, tracking_id=tid)
             return {"tracking_id": tid, "status": "COMPLETED"}

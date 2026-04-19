@@ -15,6 +15,7 @@ the main process exits. No cleanup required.
 
 import logging
 import threading
+from typing import Any
 
 logger = logging.getLogger("flowforge.watchdog")
 
@@ -36,10 +37,10 @@ class Watchdog:
 
     def __init__(
         self,
-        storage,
+        storage: Any,
         timeout_seconds: int = 300,
         interval_seconds: int = 60,
-    ):
+    ) -> None:
         if timeout_seconds < 1:
             raise ValueError("timeout_seconds must be >= 1")
         if interval_seconds < 1:

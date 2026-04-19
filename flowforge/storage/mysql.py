@@ -55,7 +55,7 @@ class MySQLStorage(StorageBackend):
         self._url = url
         self._engine = self._create_engine(url, pool_min, pool_max, pool_timeout)
 
-    def _create_engine(self, url: str, pool_min: int, pool_max: int, pool_timeout: int):
+    def _create_engine(self, url: str, pool_min: int, pool_max: int, pool_timeout: int) -> Any:
         try:
             from sqlalchemy import create_engine
         except ImportError as err:
@@ -72,7 +72,7 @@ class MySQLStorage(StorageBackend):
             pool_pre_ping=True,
         )
 
-    def _conn(self):
+    def _conn(self) -> Any:
         return self._engine.connect()
 
     # -------------------------------------------------------------------------
@@ -185,7 +185,7 @@ class MySQLStorage(StorageBackend):
     # Row mappers
     # -------------------------------------------------------------------------
 
-    def _row_to_flow(self, row) -> FlowRecord:
+    def _row_to_flow(self, row: Any) -> FlowRecord:
         return FlowRecord(
             id=row["id"], name=row["name"], status=row["status"],
             input_data=_from_json(row["input_data"]),
@@ -193,7 +193,7 @@ class MySQLStorage(StorageBackend):
             error=row["error"], created_at=row["created_at"], updated_at=row["updated_at"],
         )
 
-    def _row_to_node(self, row) -> NodeRecord:
+    def _row_to_node(self, row: Any) -> NodeRecord:
         return NodeRecord(
             id=row["id"], flow_id=row["flow_id"], step_name=row["step_name"],
             status=row["status"], input_data=_from_json(row["input_data"]),

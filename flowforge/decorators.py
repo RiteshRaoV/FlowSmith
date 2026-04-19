@@ -1,21 +1,22 @@
 import contextvars
 import functools
 from collections.abc import Callable
+from typing import Any
 
 from flowforge.flow import Flow
 
-_current_flow = contextvars.ContextVar("_current_flow", default=None)
+_current_flow: contextvars.ContextVar[Flow | None] = contextvars.ContextVar("_current_flow", default=None)
 
 
 def step(
-    name: str | Callable | None = None,
+    name: str | Callable[..., Any] | None = None,
     *,
     retries: int = 1,
     backoff: str = "fixed",
     backoff_base: float = 0.0,
     timeout: int | None = None,
-    condition: Callable | None = None,
-):
+    condition: Callable[..., Any] | None = None,
+) -> Any:
     """
     Decorator to register a function as a step within a workflow builder.
 
@@ -26,7 +27,7 @@ def step(
         @step(retries=3, backoff="exponential")
         def my_step(ctx): ...
     """
-    def decorator(fn: Callable) -> Callable:
+    def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
         step_name = name if isinstance(name, str) else fn.__name__
         flow = _current_flow.get()
         
@@ -50,7 +51,7 @@ def step(
     return decorator
 
 
-def workflow(name: str | Callable | None = None):
+def workflow(name: str | Callable[..., Any] | None = None) -> Any:
     """
     Decorator to mark a function as a nested workflow builder.
 
@@ -58,11 +59,11 @@ def workflow(name: str | Callable | None = None):
     it evaluates the inner function definitions to build the flow
     and then immediately executes the flow.
     """
-    def decorator(fn: Callable) -> Callable:
+    def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
         workflow_name = name if isinstance(name, str) else fn.__name__
         
         @functools.wraps(fn)
-        def wrapper(ctx, tracking_id: str):
+        def wrapper(ctx: Any, tracking_id: str) -> None:
             flow = Flow(workflow_name)
             token = _current_flow.set(flow)
             
@@ -85,7 +86,7 @@ def workflow(name: str | Callable | None = None):
     return decorator
 
 
-def parallel(fn: Callable) -> Callable:
+def parallel(fn: Callable[..., Any]) -> Callable[..., Any]:
     """
     Decorator to mark a block of steps to be executed concurrently.
     All @step definitions inside this function will be bundled into a ParallelGroup.
@@ -98,24 +99,24 @@ def parallel(fn: Callable) -> Callable:
 
 
 def subflow(
-    name: str | Callable | None = None,
+    name: str | Callable[..., Any] | None = None,
     *,
     retries: int = 1,
     backoff: str = "fixed",
     backoff_base: float = 0.0,
     timeout: int | None = None,
-    condition: Callable | None = None,
-):
+    condition: Callable[..., Any] | None = None,
+) -> Any:
     """
     Decorator to formally register a subflow execution.
     The decorated function must return a dict containing {"flow": Flow, "tracking_id": str}.
     """
-    def decorator(fn: Callable) -> Callable:
+    def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
         step_name = name if isinstance(name, str) else fn.__name__
         flow_builder = _current_flow.get()
         
         if flow_builder is not None:
-            def _subflow_wrapper(ctx):
+            def _subflow_wrapper(ctx: Any) -> dict[str, Any]:
                 result = fn(ctx)
                 child_runner = result["flow"]
                 tid = result["tracking_id"]

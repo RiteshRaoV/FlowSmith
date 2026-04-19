@@ -321,29 +321,29 @@ flow.run(ctx, tracking_id="test-1")
 
 ```bash
 # Start both databases
-flowforge db-up
+make db-up
 
 # Run migrations
-flowforge migrate-postgres
-flowforge migrate-mysql
+make migrate-postgres
+make migrate-mysql
 
 # Install dev dependencies
-flowforge install
+make install
 
 # Unit tests — no database needed, runs in milliseconds
-flowforge test-unit
+make test-unit
 
 # Integration tests — requires running databases
-flowforge test-integration
+make test-integration
 
 # All tests with coverage
-flowforge test
+make test
 
 # Smoke tests — execute realistic end-to-end execution flow
 python smoke_test.py
 
 # Stop both databases
-flowforge db-down
+make db-down
 ```
 
 ---
@@ -389,9 +389,9 @@ flowforge/
 | **v0.3.0** | Connection pooling, retry backoff strategies, per-step timeout                                    |
 | **v0.3.1** | Bugfixes: stuck-node SQL, cross-platform thread handling, CI on PRs, py.typed                     |
 | **v0.4.0** | Decorator API builder pattern, conditional branching                                              |
-| **v0.5.0** | Parallel step execution, First-class blocking sub-flows ← current                                 |
-| v0.6.0     | PyPI Public Release, Community outreach, Fire-and-forget daemon background workers, dashboard GUI |
-| v1.0.0     | Stable API, battle tested in production                                                           |
+| **v0.5.0** | Parallel step execution, First-class blocking sub-flows                                           |
+| **v0.6.0** | PyPI Public Release, Community outreach, Strict Typing (mypy) ← current                           |
+| v1.0.0     | Stable API, core feature completion, long-term stability                                          |
 
 ---
 

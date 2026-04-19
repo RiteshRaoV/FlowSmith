@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 BACKOFF_STRATEGIES = ("fixed", "exponential", "jitter")
 
@@ -23,14 +24,14 @@ class Step:
                   is raised. None means no timeout.
     """
     name: str
-    fn: Callable
+    fn: Callable[..., Any]
     retries: int = 1
     backoff: str = "fixed"
     backoff_base: float = 0.0
     timeout: int | None = None
-    condition: Callable | None = None
+    condition: Callable[..., Any] | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.retries < 1:
             raise ValueError(
                 f"Step '{self.name}': retries must be >= 1 (got {self.retries})"

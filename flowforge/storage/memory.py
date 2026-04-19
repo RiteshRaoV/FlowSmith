@@ -21,7 +21,7 @@ class InMemoryStorage(StorageBackend):
     Not thread-safe. Use one instance per test.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._flows: dict[str, FlowRecord] = {}
         self._nodes: dict[str, NodeRecord] = {}
 
