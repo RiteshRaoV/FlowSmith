@@ -1,4 +1,5 @@
 import os
+from typing import Any
 
 import psycopg2
 from dotenv import load_dotenv  # Add this
@@ -35,7 +36,7 @@ with console.status("[bold green]Connecting to PostgreSQL...", spinner="dots"):
     )
     register_vector(conn)
 
-def ask_codebase(query: str):
+def ask_codebase(query: str) -> Any:
     # Embed the query
     query_vector = embedding_model.encode(query).tolist()
     

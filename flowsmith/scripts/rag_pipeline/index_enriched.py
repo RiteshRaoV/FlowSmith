@@ -1,4 +1,5 @@
 import re
+from typing import Any
 
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 
@@ -12,7 +13,7 @@ generic_splitter = RecursiveCharacterTextSplitter(
     chunk_size=1000, chunk_overlap=100
 )
 
-def chunk_codebase_professionally(filepath):
+def chunk_codebase_professionally(filepath: str) -> Any:
     with open(filepath, encoding="utf-8") as f:
         content = f.read()
 

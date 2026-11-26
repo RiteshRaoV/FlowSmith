@@ -1,4 +1,5 @@
 import os
+from typing import Any
 
 import psycopg2
 from dotenv import load_dotenv
@@ -34,7 +35,7 @@ with console.status("[bold green]Connecting to PostgreSQL...", spinner="dots"):
     )
     register_vector(conn)
 
-def reformulate_query(current_query: str, history: list) -> str:
+def reformulate_query(current_query: str, history: list[tuple[str, str]]) -> str:
     # Only keep the last 3 turns to save tokens and keep context relevant
     history_text = "\n".join([f"User: {q}\nAI: {a}" for q, a in history[-3:]])
     
@@ -50,9 +51,9 @@ STANDALONE QUERY:"""
         model=model_name,
         contents=prompt
     )
-    return response.text.strip()
+    return str(response.text).strip()
 
-def ask_codebase(search_query: str, actual_query: str, history: list):
+def ask_codebase(search_query: str, actual_query: str, history: list[tuple[str, str]]) -> Any:
     # 1. Use the standalone search query for vector math
     query_vector = embedding_model.encode(search_query).tolist()
     
@@ -110,7 +111,7 @@ if __name__ == "__main__":
     console.print("\n[bold green]✅ System Ready. Type 'exit' to quit.[/bold green]\n")
     
     # Initialize the memory list
-    chat_history = [] 
+    chat_history: list[tuple[str, str]] = []
     
     while True:
         user_query = Prompt.ask("[bold cyan]Ask FlowSmith[/bold cyan]")
