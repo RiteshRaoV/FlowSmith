@@ -24,6 +24,18 @@ def _from_json(data: Any) -> Any:
     return json.loads(data)
 
 
+def _postgres_url(url: str) -> str:
+    """
+    Pin the SQLAlchemy dialect to psycopg2.
+    Newer SQLAlchemy defaults a bare postgresql:// URL to psycopg (v3), and
+    does not accept postgres:// at all.
+    """
+    for prefix in ("postgresql://", "postgres://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg2://" + url[len(prefix):]
+    return url
+
+
 class PostgresStorage(StorageBackend):
     """
     PostgreSQL storage backend using SQLAlchemy connection pooling.
@@ -56,7 +68,7 @@ class PostgresStorage(StorageBackend):
             ) from err
 
         return create_engine(
-            url,
+            _postgres_url(url),
             pool_size=pool_min,
             max_overflow=pool_max - pool_min,
             pool_timeout=pool_timeout,
