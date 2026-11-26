@@ -124,6 +124,9 @@ jobs:
           MYSQL_URL: mysql://flowsmith:flowsmith@localhost/flowsmith
         run: pytest tests/integration/test_mysql_storage.py -v --tb=short -m integration
 
+      - name: Run integration tests (SQLite)
+        run: pytest tests/integration/test_sqlite_storage.py -v --tb=short -m integration
+
   # ---------------------------------------------------------------------------
   # Job 4: Smoke tests — full end-to-end scenarios against real databases
   # ---------------------------------------------------------------------------

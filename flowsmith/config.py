@@ -27,9 +27,13 @@ def _make_storage(
         from flowsmith.storage.mysql import MySQLStorage
         return MySQLStorage(url=database_url, pool_min=pool_min, pool_max=pool_max, pool_timeout=pool_timeout)
 
+    if database_url.startswith("sqlite://"):
+        from flowsmith.storage.sqlite import SQLiteStorage
+        return SQLiteStorage(url=database_url, pool_min=pool_min, pool_max=pool_max, pool_timeout=pool_timeout)
+
     raise ValueError(
         f"Unsupported database URL scheme: '{database_url.split('://')[0]}'\n"
-        "Supported: postgresql://, postgres://, mysql://"
+        "Supported: postgresql://, postgres://, mysql://, sqlite://"
     )
 
 
@@ -44,9 +48,10 @@ def configure(
     Call once at server startup.
 
     Args:
-        database_url: PostgreSQL or MySQL connection string.
+        database_url: PostgreSQL, MySQL or SQLite connection string.
                       postgresql://user:password@host:port/dbname
                       mysql://user:password@host:port/dbname
+                      sqlite:///path/to/file.db
         pool_min:     Minimum connections kept alive in the pool. Default 2.
         pool_max:     Maximum connections in the pool. Default 10.
         pool_timeout: Seconds to wait for a connection before raising. Default 30.

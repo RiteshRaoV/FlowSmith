@@ -3,7 +3,7 @@ FlowSmith CLI
 Usage:
     flowsmith migrate --url postgresql://user:pass@localhost/db
     flowsmith migrate --url mysql://user:pass@localhost/db
-    flowsmith migrate  # reads DATABASE_URL from environment
+    flowsmith migrate --url sqlite:///flowsmith.db
     flowsmith migrate  # reads DATABASE_URL from environment
 """
 
@@ -25,10 +25,28 @@ def detect_dialect(url: str) -> str:
         return "postgres"
     if url.startswith("mysql://"):
         return "mysql"
+    if url.startswith("sqlite://"):
+        return "sqlite"
     raise ValueError(
         f"Unsupported database URL scheme: '{url.split('://')[0]}'\n"
-        "Supported schemes: postgresql://, postgres://, mysql://"
+        "Supported schemes: postgresql://, postgres://, mysql://, sqlite://"
     )
+
+
+def run_migrations_sqlite(url: str) -> None:
+    import sqlite3
+
+    from flowsmith.storage.sqlite import sqlite_path
+
+    migration_dir = MIGRATIONS_DIR / "sqlite"
+    conn = sqlite3.connect(sqlite_path(url))
+    try:
+        for sql_file in sorted(migration_dir.glob("*.sql")):
+            print(f"  -> {sql_file.name}")
+            conn.executescript(sql_file.read_text())
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def run_migrations_postgres(url: str) -> None:
@@ -153,6 +171,8 @@ def cmd_migrate(args: argparse.Namespace) -> None:
             run_migrations_postgres(url)
         elif dialect == "mysql":
             run_migrations_mysql(url)
+        elif dialect == "sqlite":
+            run_migrations_sqlite(url)
     except Exception as e:
         print(f"\nERROR: Migration failed: {e}")
         sys.exit(1)
